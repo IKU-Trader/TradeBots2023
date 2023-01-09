@@ -17,6 +17,7 @@ from matplotlib.patches import Rectangle
 import matplotlib.dates as mdates
 from datetime import datetime, timedelta
 import matplotlib.gridspec as gridspec
+from util import sliceTime
 
 TIME = 'time'
 OPEN = 'open'
@@ -186,7 +187,7 @@ class CandleChart:
         self.ax.xaxis.set_major_formatter(mdates.DateFormatter(date_format))
         pass
         
-    def drawCandle(self, tohlcv, bar_width=None, timerange=None, tick_minutes=60):    
+    def drawCandle(self, tohlcv, bar_width=None, tick_minutes=60):    
         if type(tohlcv) == dict:
             time = tohlcv[TIME]
             op = tohlcv[OPEN]
@@ -199,6 +200,9 @@ class CandleChart:
             hi = tohlcv[2]
             lo = tohlcv[3]
             cl = tohlcv[4]
+            
+        vmin = min(lo)
+        vmax = max(hi)
         
         self.ax.set_title(self.title)
         n = len(time)
@@ -209,46 +213,17 @@ class CandleChart:
         else:
             self.box_width = bar_width
         self.graphic_objects = []
-        begin = None
-        end = None
-        vmin = None
-        vmax = None
         for i in range(n):
             t = time[i]
-            if timerange is None:
-                if vmin is None:
-                    vmin = lo[i] 
-                    vmax = hi[i]
-                else:
-                    if vmin > lo[i]:
-                        vmin = lo[i]
-                    if vmax < hi[i]:
-                        vmax = hi[i]
-            else:
-                if begin is None:
-                    if t >= timerange[0]:
-                        begin = i
-                        vmin = lo[i]
-                        vmax = hi[i]
-                else:
-                    if t <= timerange[1]:
-                        if vmin > lo[i]:
-                            vmin = lo[i]
-                        if vmax < hi[i]:
-                            vmax = hi[i]
-                    else:
-                        end = i - 1
             value = [op[i], hi[i], lo[i], cl[i]]
             obj = CandleGraphic(t, value, self.box_width)
             obj.setObject(self.ax)
             self.graphic_objects.append(obj)
-        if vmin is not None and vmax is not None:
-            dw = (vmax - vmin) * 0.05
-            self.ylimit([vmin - dw, vmax + dw])
-        
+        dw = (vmax - vmin) * 0.1
+        self.ylimit([vmin - dw, vmax + dw])
         tick = self.ticks(time[0], time[-1], tick_minutes)        
-        self.ax.set_xlim(t0, t1)
         self.ax.set_xticks(tick)
+        self.ax.set_xlim(t0, t1)
         #self.ax.autoscale_view()
         return
     
@@ -342,15 +317,13 @@ class CandleChart:
         return self.ax.get_ylim()
         
 class BandPlot:
-    def __init__(self, fig, ax, title, date_format=DATE_FORMAT_DAY_TIME):
+    def __init__(self, fig, ax, title, date_format=DATE_FORMAT_TIME):
         self.fig = fig
         self.ax = ax
         self.title = title
-        self.ax.grid()
+        self.ax.grid(True)
         self.ax.xaxis_date()
         self.ax.xaxis.set_major_formatter(mdates.DateFormatter(date_format))
-        self.ax.xaxis.set_major_locator(mdates.MinuteLocator(interval=6))
-        self.ax.xaxis.set_minor_locator(mdates.MinuteLocator(interval=6))
         pass
         
     def boxWidth(self, time1, time2):
@@ -358,25 +331,43 @@ class BandPlot:
         t2 = awarePyTime2Float(time2)
         return t2 - t1
     
-    def drawBand(self, time, status, colors=None):
-        if colors is None:
-            colors = ['black', 'blue', 'red', 'pink', 'green', 'cyan', 'brown']
-        self.ax.set_title(self.title)
+    def ticks(self, t0, t1, dt_minutes):
+        tm = int(t0.minute / dt_minutes) * dt_minutes
+        time = datetime(t0.year, t0.month, t0.day, t0.hour, tm, tzinfo=t0.tzinfo)
+        ticks = []
+        while time < t1:
+            ticks.append(awarePyTime2Float(time))
+            time += timedelta(minutes=dt_minutes)
+        return ticks
+    
+    def drawBand(self, time, status, colors=None, tick_minutes=60): 
         n = len(time)
         if n < 2:
             return
-        
+        if colors is None:
+            colors = ['black', 'blue', 'red', 'pink', 'green', 'cyan', 'brown']
+        elif type(colors) == dict:
+            cs = ['white' for _ in colors.items()]
+            for key, value in colors.items():
+                cs[key] = value
+            colors = cs
+        self.ax.set_title(self.title)
         box_width = self.boxWidth(time[0], time[1])
         self.graphic_objects = []
         for i in range(n):
             t = time[i]
             s = status[i]
             if s > 0:
-                c = colors[s]
-                obj = BoxGraphic(t, box_width, c)
+                c = colors[s % len(colors)]
+                obj = BoxGraphic(t, box_width, 1.0, c)
                 obj.setObject(self.ax)
                 self.graphic_objects.append(obj)  
         self.ax.autoscale_view()
+        tick = self.ticks(time[0], time[-1], tick_minutes)        
+        self.ax.set_xticks(tick)
+        t0 = awarePyTime2Float(time[0])
+        t1 = awarePyTime2Float(time[-1])
+        self.ax.set_xlim(t0, t1)
         return        
         
     def drawLine(self, time, value, color='red', linestyle='solid', linewidth=1.0, timerange=None):

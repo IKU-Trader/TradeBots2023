@@ -9,6 +9,11 @@ import numpy as np
 
 class MathArray(object):
     
+    @classmethod 
+    def full(cls, length: int, value):
+        out = [value for i in range(length)]
+        return out
+    
     @classmethod
     def addArray(cls, array1: list, array2: list) ->list:
         out = []

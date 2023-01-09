@@ -8,35 +8,17 @@ Created on Sun Dec  4 22:37:16 2022
 import datetime
 import calendar
 import pytz
+from datetime import datetime, timezone
 
 #TIMEZONE_TOKYO = datetime.timezone(datetime.timedelta(hours=+9), 'Asia/Tokyo')
 TIMEZONE_TOKYO = pytz.timezone('Asia/Tokyo')
 
-def changeTimezone(pytime_array: [datetime.datetime], tzinfo):
+def changeTimezone(pytime_array: [datetime], tzinfo):
     out =[]
     for i in range(len(pytime_array)):
         t = pytime_array[i].astimezone(tzinfo)
         out.append(t)
     return out
-
-def sliceTime(pytime_array: list, time_from, time_to):
-    begin = None
-    end = None
-    for i in range(len(pytime_array)):
-        t = pytime_array[i]
-        if begin is None:
-            if t >= time_from:
-                begin = i
-        else:
-            if t > time_to:
-                end = i
-                return (end - begin + 1, begin, end)
-    if begin is not None:
-        end = len(pytime_array) - 1
-        length = end -begin + 1
-        return (length, begin, end)
-    else:
-        return (0, None, None)
     
 def str2pytimeArray(time_str_array: [str], tzinfo, form='%Y-%m-%d %H:%M:%S'):
     out = []
@@ -44,7 +26,7 @@ def str2pytimeArray(time_str_array: [str], tzinfo, form='%Y-%m-%d %H:%M:%S'):
         i = s.find('+')
         if i > 0:
             s = s[:i]
-        t = datetime.datetime.strptime(s, form)
+        t = datetime.strptime(s, form)
         t = pyTime(t.year, t.month, t.day, t.hour, t.minute, t.second, tzinfo)
         out.append(t)
     return out
@@ -64,7 +46,7 @@ def utcTime(year, month, day, hour, minute, second):
 #https://pytz.sourceforge.net/
 #Unfortunately using the tzinfo argument of the standard datetime constructors ‘’does not work’’ with pytz for many timezones.
 def pyTime(year, month, day, hour, minute, second, tzinfo):
-    t = datetime.datetime(year, month, day, hour, minute, second)
+    t = datetime(year, month, day, hour, minute, second)
     time = tzinfo.localize(t)
     return time
 
@@ -77,3 +59,19 @@ def isSummerTime(date_time):
         return True
     else:
         return False
+    
+def jst2timestamp(jst):
+    timestamp = []
+    for t in jst:
+        timestamp.append(t.timestamp())
+    return timestamp
+    
+def jst2utc(jst):
+    utc = []
+    for t in jst:
+        utc.append(t.astimezone(timezone.utc))
+    return utc
+    
+def npDateTime2pyDatetime(np_time):
+    py_time = datetime.fromtimestamp(np_time.astype(datetime) * 1e-9)
+    return py_time    

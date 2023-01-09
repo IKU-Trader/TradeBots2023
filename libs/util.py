@@ -7,7 +7,8 @@ Created on Sat Jan 22 20:24:47 2022
 
 import pandas as pd
 import numpy as np
-from datetime import datetime, timezone
+from const import TIME, OPEN, HIGH, LOW, CLOSE, VOLUME
+from time_util import npDateTime2pyDatetime
 
 def df2dic(df: pd.DataFrame, is_numpy=False, time_key='time', convert_keys=None):
     columns = df.columns
@@ -59,7 +60,6 @@ def dic2df(dic):
     df = pd.DataFrame(data=out, columns = keys)
     return df
 
-    
 def splitDic(dic, i):
     keys = dic.keys()
     arrays = []
@@ -72,7 +72,6 @@ def splitDic(dic, i):
         split2[key] = array[i:]
     return (split1, split2)
     
-    
 def deleteLast(dic):
     keys = dic.keys()
     arrays = []
@@ -83,7 +82,6 @@ def deleteLast(dic):
         out[key] = array[:-1]
     return out        
         
-
 def sliceDic(dic, begin, end):
     keys = dic.keys()
     arrays = []
@@ -110,8 +108,6 @@ def array2Dic(array, keys):
         dic[key] = d
     return dic
             
-        
-
 def sliceTime(pytime_array: list, time_from, time_to):
     begin = None
     end = None
@@ -139,21 +135,27 @@ def insertDicArray(dic: dict, add_dic: dict):
         return True
     except:
         return False
-    
-def jst2timestamp(jst):
-    timestamp = []
-    for t in jst:
-        timestamp.append(t.timestamp())
-    return timestamp
-    
-def jst2utc(jst):
-    utc = []
-    for t in jst:
-        utc.append(t.astimezone(timezone.utc))
-    return utc
-    
-def npDateTime2pyDatetime(np_time):
-    py_time = datetime.fromtimestamp(np_time.astype(datetime) * 1e-9)
-    return py_time
-
+        
+def sliceTohlcv(tohlcv, time_from, time_to):
+    if type(tohlcv) == dict:
+        time = tohlcv[TIME]
+    else:
+        time = tohlcv[0]
+    if time_from is None:        
+        length, begin, end = sliceTime(time, time[0], time_to)
+    elif time_to is None:
+        length, begin, end = sliceTime(time, time_from, time[-1])
+    else:
+        length, begin, end = sliceTime(time, time_from, time_to)
+        
+    if type(tohlcv) == dict:
+        out = {}
+        for key, array in tohlcv.items():
+            out[key] = array[begin: end + 1]
+        return out
+    else:
+        out = []
+        for array in tohlcv:
+            out.append(array[begin: end + 1])
+        return out
     

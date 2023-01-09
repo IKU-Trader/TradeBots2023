@@ -12,7 +12,8 @@ sys.path.append("./TA")
 import pandas as pd
 import glob
 import pytz
-from time_utility import changeTimezone, TIMEZONE_TOKYO, str2pytimeArray, sliceTime, pyTime
+from time_util import changeTimezone, TIMEZONE_TOKYO, str2pytimeArray, pyTime
+from util import sliceTime
 from datetime import datetime, timedelta
 
 TimeUnit = str
