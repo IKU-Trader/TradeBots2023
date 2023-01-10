@@ -91,6 +91,16 @@ def awarePyTimeList2Float(aware_pytime_list):
         naive = awarePytime2naive(time)
         naives.append(naive)
     return mdates.date2num(naives)
+
+def getMarker(i):
+    markers = ['\\alpha', '\\beta', '\gamma', '\sigma','\infty', \
+                '\spadesuit', '\heartsuit', '\diamondsuit', '\clubsuit', \
+                '\\bigodot', '\\bigotimes', '\\bigoplus', '\imath', '\\bowtie', \
+                '\\bigtriangleup', '\\bigtriangledown', '\oslash' \
+               '\ast', '\\times', '\circ', '\\bullet', '\star', '+', \
+                '\Theta', '\Xi', '\Phi', \
+                '\$', '\#', '\%', '\S']
+    return "$"+markers[i % len(markers)]+"$"
     
 class CandleGraphic:
     def __init__(self, py_time, ohlc, box_width):
@@ -288,14 +298,17 @@ class CandleChart:
         self.ax.grid()
         return
     
-    def drawMarkers(self, time, ref, offset, signal, value, marker, color, markersize=10):
+    def drawMarkers(self, time, ref, offset, signal, value, marker, color, overlay=None, markersize=20, alpha=0.5):
         for t, r, s in zip(time, ref, signal):
             if s == value:
-                self.drawMarker(t, r + offset, marker, color, markersize=markersize)
+                self.drawMarker(t, r + offset, marker, color, overlay=overlay, markersize=markersize, alpha=alpha)
         
-    def drawMarker(self, time, value, marker, color, markersize=10):
+    def drawMarker(self, time, value, marker, color, overlay=None, markersize=20, alpha=0.5):
         t = awarePyTime2Float(time)
-        self.ax.plot(t, value, marker=marker, color=color, markersize=markersize)
+        self.ax.plot(t, value, marker=marker, color=color, markersize=markersize, alpha=alpha)
+        if overlay is not None:
+            marker = '$' + str(overlay) + '$'
+            self.ax.plot(t, value, marker=marker, color='white', markersize=markersize*0.5, alpha=1.0)
         return
     
     def drawText(self, time, value, text, size=10):

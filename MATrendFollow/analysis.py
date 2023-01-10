@@ -58,8 +58,8 @@ def test2():
     chart1.drawLine(dic2[TIME], dic2['SMA5'], label='SMA5')
     chart1.drawLine(dic2[TIME], dic2['SMA20'], color='green', label='SMA20')
     chart1.drawLine(dic2[TIME], dic2['SMA60'], color='blue', label='SMA60')
-    chart1.drawMarkers(dic2[TIME], dic2[LOW], -50, dic2['SIGNAL'], 1, '^', 'green')
-    chart1.drawMarkers(dic2[TIME], dic2[HIGH], 50, dic2['SIGNAL'], 2, 'v', 'red')
+    chart1.drawMarkers(dic2[TIME], dic2[LOW], -50, dic2['SIGNAL'], 1, '^', 'green', overlay=1, markersize=20)
+    chart1.drawMarkers(dic2[TIME], dic2[HIGH], 50, dic2['SIGNAL'], 2, 'v', 'red', overlay=2, markersize=20)
     
     chart2 = BandPlot(fig, axes[1], 'MA Trend')
     colors = {0:'white',
