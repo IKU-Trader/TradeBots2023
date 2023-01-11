@@ -13,31 +13,46 @@ sys.path.append("../libs/TA")
 from DataServerStub import UNIT_MINUTE
 from DataServerStub import DataServerStub
 
+from datetime import timedelta
 from time_util import pyTime, TIMEZONE_TOKYO
-from CandleChart import CandleChart, BandPlot, gridFig
+from CandleChart import CandleChart, BandPlot, gridFig, Colors
 from STA import analysis, arrays2dic, SMA, WINDOW, MA_TREND_BAND, THRESHOLD, MA_KEYS, PATTERNS, SOURCE, PATTERN_MATCH
-from STA import UPPER_TREND, UPPER_SUB_TREND, LOWER_TREND, LOWER_SUB_TREND, NO_TREND
+from STA import UPPER_TREND, UPPER_SUB_TREND, UPPER_DIP, LOWER_TREND, LOWER_SUB_TREND, LOWER_DIP, NO_TREND
 from const import TIME, OPEN, HIGH, LOW, CLOSE, VOLUME
 from util import sliceTohlcv
 
-def test1():
-    server = DataServerStub('DJI', 5, UNIT_MINUTE)
-    server.importFile('../data/DJI_Feature_2019_08.csv')
-    t0 = pyTime(2019, 8, 9, 0, 0, 0, TIMEZONE_TOKYO)
-    t1 = pyTime(2019, 8, 10, 0, 0, 0, TIMEZONE_TOKYO)
-    candles = server.getCandles()
-    df = pd.DataFrame(data=candles, columns=['Time', 'Open', 'High', 'Low', 'Close', 'Volume'])
-    df.to_csv('validation.csv', index=False)
 
-def test2():
-    server = DataServerStub('DJI', 5, UNIT_MINUTE)
-    server.importFile('../data/DJI_Feature_2019_08.csv')
-    t0 = pyTime(2019, 8, 8, 0, 0, 0, TIMEZONE_TOKYO)
-    t1 = pyTime(2019, 8, 8, 9, 0, 0, TIMEZONE_TOKYO)
-    t2 = pyTime(2019, 8, 9, 6, 0, 0, TIMEZONE_TOKYO)
-    tohlcv = server.getTohlcv(time_from=t0, time_to=t2)
+def day_trade(tohlcv:dict, year:int, month:int, day:int):
+    #t0 = pyTime(year, month, day, 0, 0, 0, TIMEZONE_TOKYO)
+    t1 = pyTime(year, month, day, 20, 0, 0, TIMEZONE_TOKYO)
+    t2 = t1 + timedelta(hours=8)
+    dic = sliceTohlcv(tohlcv, t1, t2)
     fig, axes = gridFig([8, 1], (15, 5))
     chart1 = CandleChart(fig, axes[0], 'dji')
+    chart1.drawCandle(dic)
+    chart1.drawLine(dic[TIME], dic['SMA5'], label='SMA5')
+    chart1.drawLine(dic[TIME], dic['SMA20'], color='green', label='SMA20')
+    chart1.drawLine(dic[TIME], dic['SMA60'], color='blue', label='SMA60')
+    chart1.drawMarkers(dic[TIME], dic[LOW], -50, dic['SIGNAL'], 1, '^', 'green', overlay=1, markersize=20)
+    chart1.drawMarkers(dic[TIME], dic[LOW], -50, dic['SIGNAL'], 2, '^', 'green', overlay=2, markersize=20)
+    chart1.drawMarkers(dic[TIME], dic[HIGH], 
+                       50, dic['SIGNAL'], -1, '^', 'red', overlay=1, markersize=20)
+    chart1.drawMarkers(dic[TIME], dic[HIGH], 50, dic['SIGNAL'], -2, '^', 'red', overlay=2, markersize=20)
+    
+    chart2 = BandPlot(fig, axes[1], 'MA Trend')
+    colors = {UPPER_TREND: 'red',
+              UPPER_SUB_TREND: Colors.light_red,
+              UPPER_DIP: 'black',
+              LOWER_TREND: 'green',
+              LOWER_SUB_TREND: Colors.light_green,
+              LOWER_DIP: 'black',
+              NO_TREND: 'gray'}
+    chart2.drawBand(dic[TIME], dic['MA_TREND'], colors=colors)
+
+def trades():
+    server = DataServerStub('DJI', 5, UNIT_MINUTE)
+    server.importFile('../data/DJI_Feature_2019.csv')
+    tohlcv = server.getTohlcv()
     dic = arrays2dic(tohlcv)
     analysis(dic, SMA, {WINDOW: 5}, name='SMA5')
     analysis(dic, SMA, {WINDOW: 20}, name='SMA20')
@@ -48,28 +63,13 @@ def test2():
                     PATTERNS:[
                             [[NO_TREND, UPPER_TREND], 1, 0],
                             [[UPPER_SUB_TREND, UPPER_TREND], 1, 0],
-                            [[NO_TREND, LOWER_TREND], 2, 0],
-                            [[LOWER_SUB_TREND, LOWER_TREND], 2, 0]
+                            [[UPPER_DIP, UPPER_TREND], 2, 0],
+                            [[NO_TREND, LOWER_TREND], -1, 0],
+                            [[LOWER_SUB_TREND, LOWER_TREND], -1, 0],
+                            [[LOWER_DIP, LOWER_TREND], -2, 0]
                             ]}
     analysis(dic, PATTERN_MATCH, patterns, 'SIGNAL')
+    day_trade(dic, 2019, 8, 8)
     
-    dic2 = sliceTohlcv(dic, t1, t2)
-    chart1.drawCandle(dic2)
-    chart1.drawLine(dic2[TIME], dic2['SMA5'], label='SMA5')
-    chart1.drawLine(dic2[TIME], dic2['SMA20'], color='green', label='SMA20')
-    chart1.drawLine(dic2[TIME], dic2['SMA60'], color='blue', label='SMA60')
-    chart1.drawMarkers(dic2[TIME], dic2[LOW], -50, dic2['SIGNAL'], 1, '^', 'green', overlay=1, markersize=20)
-    chart1.drawMarkers(dic2[TIME], dic2[HIGH], 50, dic2['SIGNAL'], 2, 'v', 'red', overlay=2, markersize=20)
-    
-    chart2 = BandPlot(fig, axes[1], 'MA Trend')
-    colors = {0:'white',
-              UPPER_TREND:'red',
-              UPPER_SUB_TREND:'orange',
-              LOWER_TREND:'green',
-              LOWER_SUB_TREND: 'yellow',
-              NO_TREND: 'gray'}
-    chart2.drawBand(dic2[TIME], dic2['MA_TREND'], colors=colors)
-
-
 if __name__ == '__main__':
-    test2()
+    trades()

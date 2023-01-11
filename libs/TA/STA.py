@@ -37,11 +37,15 @@ COEFF = 'coeff'
 # MA Trend
 THRESHOLD = 'threshold'
 MA_KEYS = 'ma_keys'
+NO_TREND = 0
 UPPER_TREND = 1
 UPPER_SUB_TREND = 2
-LOWER_TREND = 3
-LOWER_SUB_TREND = 4
-NO_TREND = 5
+UPPER_DIP =  3
+LOWER_TREND = -1
+LOWER_SUB_TREND = -2
+LOWER_DIP = -3
+
+
 
 SOURCE = 'source'
 PATTERNS = 'patterns'
@@ -65,6 +69,24 @@ def arrays2dic(tohlcv:[]):
     return dic
 
 class TechnicalAnalysis:
+    
+    @classmethod 
+    def candleBody(cls, open_price, high_price, low_price, close_price):
+        body_low = min([high_price, low_price])
+        body_high = max([high_price, low_price])
+        body = body_high - body_low
+        is_positive = close_price > open_price
+        spike_high = high_price - body_high
+        spike_low = body_low - low_price
+        return (is_positive, body, body_low, body_high)
+    
+    @classmethod 
+    def candleSpike(cls, open_price, high_price, low_price, close_price):
+        is_positive, body, body_low, body_high = cls.candleBodey(open_price, high_price, low_price, close_price)
+        spike_high = high_price - body_high
+        spike_low = body_low - low_price
+        return (spike_high, spike_low)
+
     @classmethod 
     def hl2(cls, dic):
         high = dic[HIGH]
@@ -150,11 +172,11 @@ class TechnicalAnalysis:
         return signal
     
     @classmethod
-    def maTrendBand(cls, ma_list, threshold):
+    def maTrendBand(cls, op, hi, lo, cl, ma_list, threshold):
         w1 = MathArray.subtractArray(ma_list[0], ma_list[1])
         w2 = MathArray.subtractArray(ma_list[1], ma_list[2])
         n = len(w1)
-        out = MathArray.full(n, 0)
+        out = MathArray.full(n, NO_TREND)
         for i in range(n):
             if w1[i] > 0 and w2[i] > 0:
                 out[i] = UPPER_TREND
@@ -164,7 +186,14 @@ class TechnicalAnalysis:
                 out[i] = LOWER_TREND
             elif w1[i] < 0 and w2[i] > 0:
                 out[i] = LOWER_SUB_TREND
-            #sticky = math.abs(w1 / MA2 * 100.0) < threshold  and math.abs(w2 / MA2 * 100.0) < threshold
+            if out[i] == UPPER_TREND:
+                (is_positive, body, body_low, body_high) = cls.candleBody(op[i], hi[i], lo[i], cl[i])
+                if ma_list[1][i] > body_low:
+                    out[i] = UPPER_DIP
+            if out[i] == LOWER_TREND:
+                (is_positive, body, body_low, body_high) = cls.candleBody(op[i], hi[i], lo[i], cl[i])
+                if ma_list[1][i] < body_high:
+                    out[i] = LOWER_DIP            
             if abs(w1[i] / ma_list[1][i] * 100.0) < threshold and abs(w2[i] / ma_list[2][i] * 100.0 < threshold):
                 out[i] = NO_TREND
         return out
@@ -237,7 +266,7 @@ def analysis(data:dict, key:str, params:dict, name:str=None):
         mas = [data[key] for key in ma_keys]
         if len(mas) != 3:
             raise Exception('Bad MA_TREND_BAND parameter')
-        array = TechnicalAnalysis.maTrendBand(mas, threshold)
+        array = TechnicalAnalysis.maTrendBand(data[OPEN], data[HIGH], data[LOW], data[CLOSE], mas, threshold)
     elif key == PATTERN_MATCH:
         source = params[SOURCE]
         signal = data[source]

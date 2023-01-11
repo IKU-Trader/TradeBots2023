@@ -31,10 +31,23 @@ DATE_FORMAT_TIME = '%H:%M'
 DATE_FORMAT_DAY = '%m-%d'
 DATE_FORMAT_DAY_TIME = '%m-%d %H:%M'
 
-LIGHT_GREEN = '#22bbbb'
-LIGHT_RED = '#ee9999'
-RED = '#ff4444'
-GREEN = '#44ffcc'
+
+
+class colors():    
+    @property
+    def light_green(self):
+        return '#22bbbb'
+    @property
+    def light_red(self):
+        return '#ee9999'
+    @property
+    def red(self):
+        return '#ff4444'
+    @property
+    def green(self):
+        return '#44ffcc'
+    
+Colors = colors()
 
 def candleData2arrays(ohlc):
     if len(ohlc) == 0:
@@ -110,10 +123,10 @@ class CandleGraphic:
         self.box_width = box_width
         self.line_width = 1.0
         self.alpha = 0.7
-        self.box_body_color_positive = LIGHT_GREEN
-        self.box_line_color_positive = GREEN
-        self.box_body_color_negative = LIGHT_RED
-        self.box_line_color_negative = RED
+        self.box_body_color_positive = Colors.light_green
+        self.box_line_color_positive = Colors.green
+        self.box_body_color_negative = Colors.light_red
+        self.box_line_color_negative = Colors.red
 
         t = awarePyTime2Float(py_time)
         op = ohlc[0]
