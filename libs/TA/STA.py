@@ -210,7 +210,7 @@ class TechnicalAnalysis:
         return out
     
 # -----
-def sequence(key: str, dic: dict, begin: int, end:int, params: dict):
+def seqIndicator(dic: dict, key: str, begin: int, end:int, params: dict, name:str=None):
     n = len(dic[OPEN])
     if WINDOW in params.keys():
         window = params[WINDOW]
@@ -228,23 +228,22 @@ def sequence(key: str, dic: dict, begin: int, end:int, params: dict):
                 data = sliceDic(dic, begin - window, end)
         else:
             data = sliceDic(dic, begin, end)
-    array = analysis(data, key, params)    
+    array = indicator(data, key, params, name=name, should_set=False)    
     if array is None:
         return False
     if key in dic.keys():
         j = len(array) - (end - begin + 1)
-        original = dic[key]
+        original = data[key]
         original[begin: end + 1] = array[j:]
     else:
-        dic[key] = array
+        data[key] = array
     return True
 
-def analysis(data:dict, key:str, params:dict, name:str=None):
+def indicator(data:dict, key:str, params:dict, name:str=None, should_set=True):
     if WINDOW in params.keys():
         window = params[WINDOW]
     if COEFF in params.keys():
-        coeff = params[COEFF]
-        
+        coeff = params[COEFF]        
     if key == SMA:
         array = TechnicalAnalysis.sma(data[CLOSE], window)
     elif key == ATR:
@@ -273,12 +272,13 @@ def analysis(data:dict, key:str, params:dict, name:str=None):
         patterns = params[PATTERNS]
         array = TechnicalAnalysis.patternMatching(signal, patterns)
     else:
-        return
+        return None
     
     if name is None:
         name = key
-    data[name] = array
-    return 
+    if should_set:
+        data[name] = array
+    return array
 
 # -----
 def isKeys(dic, keys):

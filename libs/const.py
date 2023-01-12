@@ -12,3 +12,7 @@ LOW = 'low'
 CLOSE = 'close'
 VOLUME = 'volume'
 
+TimeUnit = str
+UNIT_MINUTE:TimeUnit = 'MINUTE'
+UNIT_HOUR:TimeUnit = 'HOUR'
+UNIT_DAY:TimeUnit = 'DAY'
