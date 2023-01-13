@@ -81,13 +81,14 @@ class DataBuffer:
                 last_time = tmp_candles[-1][0]
             else:
                 last_time = self.dic[TIME][-1]
-            if t_round > last_time:    
+            if t == t_round:    
                 tmp_candles.append(values)
                 candle = self.candlePrice(t_round, tmp_candles)
                 new_candles.append(candle)
                 tmp_candles = []
             else:
-                tmp_candles.append(values)
+                if t > last_time:
+                    tmp_candles.append(values)
         self.tmp_candles = tmp_candles
         begin = len(self.dic[TIME])
         m = len(new_candles)
