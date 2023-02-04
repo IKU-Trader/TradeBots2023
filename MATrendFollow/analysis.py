@@ -10,15 +10,15 @@ sys.path.append("../libs")
 sys.path.append("../libs/PyCandleChart")
 sys.path.append("../libs/TA")
 
-from DataServerStub import UNIT_MINUTE
 from DataServerStub import DataServerStub
+from DataBuffer import DataBuffer
 
 from datetime import timedelta
 from time_util import pyTime, TIMEZONE_TOKYO
 from CandleChart import CandleChart, BandPlot, gridFig, Colors
-from STA import analysis, arrays2dic, SMA, WINDOW, MA_TREND_BAND, THRESHOLD, MA_KEYS, PATTERNS, SOURCE, PATTERN_MATCH
+from STA import seqIndicator, indicator, arrays2dic, SMA, WINDOW, MA_TREND_BAND, THRESHOLD, MA_KEYS, PATTERNS, SOURCE, PATTERN_MATCH
 from STA import UPPER_TREND, UPPER_SUB_TREND, UPPER_DIP, LOWER_TREND, LOWER_SUB_TREND, LOWER_DIP, NO_TREND
-from const import TIME, OPEN, HIGH, LOW, CLOSE, VOLUME
+from const import TIME, OPEN, HIGH, LOW, CLOSE, VOLUME, UNIT_MINUTE
 from util import sliceTohlcv
 
 
@@ -50,15 +50,13 @@ def day_trade(tohlcv:dict, year:int, month:int, day:int):
     chart2.drawBand(dic[TIME], dic['MA_TREND'], colors=colors)
 
 def trades():
-    server = DataServerStub('DJI', 5, UNIT_MINUTE)
+    server = DataServerStub('DJI')
     server.importFile('../data/DJI_Feature_2019.csv')
-    tohlcv = server.getTohlcv()
-    dic = arrays2dic(tohlcv)
-    analysis(dic, SMA, {WINDOW: 5}, name='SMA5')
-    analysis(dic, SMA, {WINDOW: 20}, name='SMA20')
-    analysis(dic, SMA, {WINDOW: 60}, name='SMA60')
-    params = {MA_KEYS:['SMA5', 'SMA20', 'SMA60'], THRESHOLD:0.05}
-    analysis(dic, MA_TREND_BAND, params, name='MA_TREND')
+    params = {}
+    params['SMA5'] = [SMA, {WINDOW: 5}]
+    params['SMA20'] = [SMA, {WINDOW: 20}]
+    params['SMA60'] = [SMA, {WINDOW: 60}]
+    params['MA_TREND'] = [MA_TREND_BAND, {MA_KEYS:['SMA5', 'SMA20', 'SMA60'], THRESHOLD:0.05}]
     patterns = {    SOURCE: 'MA_TREND',
                     PATTERNS:[
                             [[NO_TREND, UPPER_TREND], 1, 0],
@@ -68,8 +66,9 @@ def trades():
                             [[LOWER_SUB_TREND, LOWER_TREND], -1, 0],
                             [[LOWER_DIP, LOWER_TREND], -2, 0]
                             ]}
-    analysis(dic, PATTERN_MATCH, patterns, 'SIGNAL')
-    day_trade(dic, 2019, 8, 8)
+    params['SIGNAL'] = [PATTERN_MATCH, patterns]
+    buffer = DataBuffer(server.tohlcv, params, 5)
+    day_trade(buffer.dic, 2019, 8, 8)
     
 if __name__ == '__main__':
     trades()

@@ -37,23 +37,32 @@ def TAParams():
             ]
     return params
 
-def init():
+def create():
     server = DataServerStub('DJI')
     server.importFile('../data/DJI_Feature_2019_08.csv')
-    n = server.size()
+   
     tohlcv = server.init(100)
     buffer = DataBuffer(tohlcv, TAParams(), 5)
+    return server, buffer
+
+def loop(server, buffer):
+    n = server.size()
     for i in range(n):
         tohlcv = server.next()
         if tohlcv is None:
             break
         candles = buffer.toCandles(tohlcv)
         buffer.update(candles)
+        print(buffer.tmp_candles)
+        t, d = buffer.temporary(None)
+        print(t, str(d[TIME]))
         
     pass
 
 def daytrade():
-    init()
+    server, buffer = create()
+    loop(server, buffer)
+    
     pass
 
 

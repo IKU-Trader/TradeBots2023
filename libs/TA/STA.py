@@ -19,24 +19,27 @@ LOW = 'low'
 CLOSE = 'close'
 VOLUME = 'volume'
 
-ATR = 'atr'
-TR = 'tr'
-SMA = 'sma'
-HL2 = 'hl2'
-ATR_BAND_UPPER = 'atr_band_upper'
-ATR_BAND_LOWER = 'atr_band_lower'
-ATR_BREAKUP_SIGNAL = 'atr_breakup_signal'
-ATR_BREAKDOWN_SIGNAL = 'atr_breakdown_signal'
+TAMethod = str
+ATR: TAMethod = 'atr'
+TR: TAMethod = 'tr'
+SMA: TAMethod = 'sma'
+HL2: TAMethod = 'hl2'
+ATR_BAND_UPPER: TAMethod = 'atr_band_upper'
+ATR_BAND_LOWER: TAMethod = 'atr_band_lower'
+ATR_BREAKUP_SIGNAL: TAMethod = 'atr_breakup_signal'
+ATR_BREAKDOWN_SIGNAL: TAMethod = 'atr_breakdown_signal'
 
-MA_TREND_BAND = 'ma_trend_band'
-PATTERN_MATCH = 'pattern_match'
+MA_TREND_BAND: TAMethod = 'ma_trend_band'
+PATTERN_MATCH: TAMethod = 'pattern_match'
 
-WINDOW = 'window'
-COEFF = 'coeff'
+
+TAParam = str
+WINDOW: TAParam = 'window'
+COEFF: TAParam = 'coeff'
 
 # MA Trend
-THRESHOLD = 'threshold'
-MA_KEYS = 'ma_keys'
+THRESHOLD: TAParam = 'threshold'
+MA_KEYS: TAParam  = 'ma_keys'
 NO_TREND = 0
 UPPER_TREND = 1
 UPPER_SUB_TREND = 2
@@ -45,10 +48,8 @@ LOWER_TREND = -1
 LOWER_SUB_TREND = -2
 LOWER_DIP = -3
 
-
-
-SOURCE = 'source'
-PATTERNS = 'patterns'
+SOURCE: TAParam = 'source'
+PATTERNS: TAParam = 'patterns'
 
 
 def nans(length):
@@ -289,20 +290,20 @@ def isKeys(dic, keys):
 
 def sma(key, dic, begin, end):
     params = {WINDOW: 14}
-    return sequence(key, dic, begin, end, params)
+    return seqIndicator(key, dic, begin, end, params)
 
 def atr(key, dic, begin, end):
     params = {WINDOW: 14}
-    return sequence(key, dic, begin, end, params)
+    return seqIndicator(key, dic, begin, end, params)
 
 def atrband(key, dic, begin, end):
     if not isKeys(dic, [ATR]):
         return False
     params ={WINDOW:14, COEFF: 1.0}
-    return sequence(key, dic, begin, end, params)
+    return seqIndicator(key, dic, begin, end, params)
 
 def atrbreak(key, dic, begin, end):
     if not isKeys(dic, [ATR_BAND_LOWER, ATR_BAND_UPPER]):
         return False
     params = {WINDOW: 14}
-    return sequence(key, dic, begin, end, params)
+    return seqIndicator(key, dic, begin, end, params)

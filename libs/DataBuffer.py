@@ -4,6 +4,7 @@ sys.path.append("./TA")
 
 import pandas as pd
 import numpy as np
+import copy
 from datetime import datetime, timedelta
 from const import TIME, OPEN, HIGH, LOW, CLOSE, VOLUME
 from const import TimeUnit, UNIT_MINUTE, UNIT_HOUR, UNIT_DAY
@@ -28,6 +29,7 @@ class DataBuffer:
     def size(self):
         return len(self.dic)
     
+    
     def lastTime(self):
         if self.size() > 0:
             return self.data[TIME][-1]
@@ -51,9 +53,9 @@ class DataBuffer:
     
     # dic: tohlcv+ array dict
     def addIndicator(self, dic: dict):
-        for p in self.ta_params:
-            key, param, name = p 
-            indicator(dic, key, param, name)
+        for name, value in self.ta_params.items():
+            method, param = value 
+            indicator(dic, method, param, name=name)
         return dic
 
     def addSeqIndicator(self, dic: dict, begin: int, end: int):
@@ -93,15 +95,31 @@ class DataBuffer:
         begin = len(self.dic[TIME])
         m = len(new_candles)
         end = begin + m - 1
-        self.merge(new_candles)
+        self.merge(self.dic, new_candles)
         self.addSeqIndicator(self.dic, begin, end)
         return (begin, end)
 
-    def merge(self, candles):
+    def temporary(self, candle):
+        tmp_candles = copy.deepcopy(self.tmp_candles)
+        if len(tmp_candles) == 0:
+            return self.dic[TIME][-1], self.dic.copy()
+        t = tmp_candles[-1][0]
+        t_round =  self.roundTime(t, self.interval_minutes, UNIT_MINUTE)
+        if candle is not None:
+            t1 = candle[0]
+            t_round1 = self.roundTime(t1, self.interval_minutes, UNIT_MINUTE)
+            if t_round1 == t_round and t1 >= t:
+                tmp_candles.append(candle)
+        new_candle = self.candlePrice(t_round, tmp_candles)
+        tmp_dic = copy.deepcopy(self.dic)
+        self.merge(tmp_dic, [new_candle])
+        return tmp_candles[-1][0], tmp_dic
+
+    def merge(self, dic: dict, candles):
         index = {TIME: 0, OPEN: 1, HIGH: 2, LOW: 3, CLOSE: 4, VOLUME: 5}
         n = len(candles)
         blank = MathArray.full(n, np.nan)
-        for key, array in self.dic.items():
+        for key, array in dic.items():
             try:
                 i = index[key]
                 a = [candle[i] for candle in candles]
@@ -210,5 +228,3 @@ class DataBuffer:
         if len(tohlcv) > 5:
             dic[VOLUME] = tohlcv[5]
         return dic
-
-        
