@@ -159,3 +159,42 @@ def sliceTohlcv(tohlcv, time_from, time_to):
             out.append(array[begin: end + 1])
         return out
     
+def findTime(pytime_array: list, time, length):
+    index = None
+    for i, t in enumerate(pytime_array):
+        if t >= time:
+            index = i
+            break
+    if index is None:
+        return (None, None, None)
+    if index == 0:
+        return (None, None, None)
+    begin = index -  length
+    if begin < 0:
+        begin = 0
+    end = index + length
+    if end >= len(pytime_array):
+        end = len(pytime_array) - 1
+    return (int(begin), int(index), int(end)) 
+        
+def sliceTohlcvWithLength(tohlcv, t, length):
+    if type(tohlcv) == dict:
+        time = tohlcv[TIME]
+    else:
+        time = tohlcv[0]    
+    (begin, index, end) = findTime(time, t, length)
+    if type(tohlcv) == dict:
+        out = {}
+        for key, array in tohlcv.items():
+            out[key] = array[begin: end + 1]
+        return out
+    else:
+        out = []
+        for array in tohlcv:
+            out.append(array[begin: end + 1])
+        return out
+    
+    
+    
+    
+    

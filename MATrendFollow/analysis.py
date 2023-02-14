@@ -19,15 +19,14 @@ from CandleChart import CandleChart, BandPlot, gridFig, Colors
 from STA import seqIndicator, indicator, arrays2dic, SMA, WINDOW, MA_TREND_BAND, THRESHOLD, MA_KEYS, PATTERNS, SOURCE, PATTERN_MATCH
 from STA import UPPER_TREND, UPPER_SUB_TREND, UPPER_DIP, LOWER_TREND, LOWER_SUB_TREND, LOWER_DIP, NO_TREND
 from const import TIME, OPEN, HIGH, LOW, CLOSE, VOLUME, UNIT_MINUTE
-from util import sliceTohlcv
+from util import sliceTohlcv, sliceTohlcvWithLength
 
 
 def day_trade(tohlcv:dict, year:int, month:int, day:int):
     #t0 = pyTime(year, month, day, 0, 0, 0, TIMEZONE_TOKYO)
-    t1 = pyTime(year, month, day, 20, 0, 0, TIMEZONE_TOKYO)
-    t2 = t1 + timedelta(hours=8)
-    dic = sliceTohlcv(tohlcv, t1, t2)
-    fig, axes = gridFig([8, 1], (15, 5))
+    t = pyTime(year, month, day, 20, 0, 0, TIMEZONE_TOKYO)
+    dic = sliceTohlcvWithLength(tohlcv, t, 24 * 60 / 5)
+    fig, axes = gridFig([8, 1], (30, 5))
     chart1 = CandleChart(fig, axes[0], 'dji')
     chart1.drawCandle(dic)
     chart1.drawLine(dic[TIME], dic['SMA5'], label='SMA5')
@@ -51,7 +50,7 @@ def day_trade(tohlcv:dict, year:int, month:int, day:int):
 
 def trades():
     server = DataServerStub('DJI')
-    server.importFile('../data/DJI_Feature_2019.csv')
+    server.importFile('../data/DJI/DJI_Feature_2019.csv')
     params = {}
     params['SMA5'] = [SMA, {WINDOW: 5}]
     params['SMA20'] = [SMA, {WINDOW: 20}]
@@ -68,7 +67,7 @@ def trades():
                             ]}
     params['SIGNAL'] = [PATTERN_MATCH, patterns]
     buffer = DataBuffer(server.tohlcv, params, 5)
-    day_trade(buffer.dic, 2019, 8, 8)
+    day_trade(buffer.dic, 2019, 8, 7)
     
 if __name__ == '__main__':
     trades()
