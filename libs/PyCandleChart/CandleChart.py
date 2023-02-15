@@ -372,22 +372,22 @@ class BandPlot:
             return
         if colors is None:
             colors = ['black', 'blue', 'red', 'pink', 'green', 'cyan', 'brown']
-        elif type(colors) == dict:
-            cs = ['white' for _ in colors.items()]
-            for key, value in colors.items():
-                cs[key] = value
-            colors = cs
         self.ax.set_title(self.title)
         box_width = self.boxWidth(time[0], time[1])
         self.graphic_objects = []
         for i in range(n):
             t = time[i]
             s = status[i]
-            if s > 0:
-                c = colors[s % len(colors)]
-                obj = BoxGraphic(t, box_width, 1.0, c)
-                obj.setObject(self.ax)
-                self.graphic_objects.append(obj)  
+            if type(colors) == dict:
+                try: 
+                    c = colors[s]
+                except:
+                    c = 'white'
+            else:
+                c = colors[abs(s) % len(colors)]
+            obj = BoxGraphic(t, box_width, 1.0, c)
+            obj.setObject(self.ax)
+            self.graphic_objects.append(obj)  
         self.ax.autoscale_view()
         tick = self.ticks(time[0], time[-1], tick_minutes)        
         self.ax.set_xticks(tick)
