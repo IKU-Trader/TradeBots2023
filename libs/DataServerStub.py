@@ -13,6 +13,8 @@ from util import sliceTime
 from datetime import datetime, timedelta
 import random
 
+import numpy as np
+
 
 def fileList(dir_path, extension):
     path = os.path.join(dir_path, '*.' + extension)
@@ -70,46 +72,47 @@ class DataServerStub:
         tohlcv = self.parseTime(tohlcv)
         self.tohlcv = tohlcv
         
-    def init(self, initial_num:int, step_num=10):
-        self.index = initial_num
-        self.step_num = step_num
+    def init(self, initial_num:int, step_sec=0):
+        self.currentIndex = initial_num - 1
+        tohlcv = self.sliceTohlcv(0, self.currentIndex)
+        if step_sec == 0:
+            self.step_num = 0
+        else:
+            self.step_num = int(60 / step_sec) - 1
+            self.dummy = self.makeDummy(self.tohlcvAt(self.currentIndex + 1), self.step_sec, self.step_num)
         self.step = 0
-        tohlcv = self.sliceData(0, initial_num - 1)
         return tohlcv
 
 
-    def interpolate(self, index, step):
-        tohlcv1 = self.sliceData(index, index)
-        tohlcv2 = self.sliceData(index + 1, index + 1)
-        dt = tohlcv2[0] - tohlcv1[0]
-        if dt != timedelta(minutes=1):
-            return []
-        
-        if step == self.stem_num - 1:
-            return (tohlcv2, index + 1, 0)
-
-        price = []
-        h = tohlcv2[2]
-        l = tohlcv2[3]
-        c = tohlcv2[4]
-        for i in range(self.step_num - 2):
-            p = l + (h - l) * i / (self.step_num - 2)
-            price.append(p)
-        price.append(c)
-        random.shuffle(c)
-            
-            
-        t = tohlcv1[0] + timedelta(minutes=int(60/step))
-        o = tohlcv2[1]
-        
-        
+    def makeDummy(self, next_tohlcv, tstep, num):
+        t = next_tohlcv[0]
+        lo = next_tohlcv[3]
+        hi = next_tohlcv[2]
+        buffer = np.arange(lo, hi + 1, (hi - lo) / (num - 1))
+        np.random.shuffle(buffer)
+        dummy = []
+        o = next_tohlcv[1]
+        h = o
+        l = o
+        for i, price in enumerate(buffer):
+            if i > 0:
+                if price > h:
+                    h = price
+                if price < l:
+                    l = price
+            dummy.append([t, o, h, l, price]) 
+        return dummy
         
 
-    def nextData(self):
-        if self.index > self.size() - 1:
-            return None
-        
-        if self.step == self.step_num - 1:
+    def nextData(self):        
+        if self.step_num == 0:
+            self.currentIndex += 1
+            if self.currentIndex > self.size() - 1:
+                return None
+            else:
+                return self.tohlcAt(self.currentIndex)
+        else:
+            tohlcv = self.dummy
             self.index += 1
             self.step = 0
             self.dummy_tohlcv = self.interpolate(self.index)
@@ -119,13 +122,16 @@ class DataServerStub:
 
         self.step += 1
         
-        return self.dummy_tohlcv[self.step]
+        return self.dummy[self.step]
 
-    def sliceData(self, begin: int, end: int):
+    def sliceTohlcv(self, begin: int, end: int):
         out = []
         for array in self.tohlcv:
             out.append(array[begin: end + 1])
         return out
+    
+    def tohlcvAt(self, index):
+        return self.tohlcv[index]
 
     def timeRange(self):
         t0 = self.tohlcv[0][0]
@@ -140,7 +146,7 @@ class DataServerStub:
         if len(tohlcv) == 0:
             return []
         return self.toCandles(tohlcv)
-    
+
     def toTohlcv(self, candles:[]):
         n = len(candles)
         m = len(candles[0])
