@@ -79,31 +79,49 @@ class DataServerStub:
             self.step_num = 0
         else:
             self.step_num = int(60 / step_sec) - 1
-            self.dummy = self.makeDummy(self.tohlcvAt(self.currentIndex + 1), self.step_sec, self.step_num)
+            self.dummy = self.makeDummy(self.tohlcvAt(self.currentIndex + 1), self.step_num)
         self.step = 0
         return tohlcv
 
-
-    def makeDummy(self, next_tohlcv, tstep, num):
+    def makeDummy(self, next_tohlcv, num):
         t = next_tohlcv[0]
         lo = next_tohlcv[3]
         hi = next_tohlcv[2]
+        
         buffer = np.arange(lo, hi + 1, (hi - lo) / (num - 1))
         np.random.shuffle(buffer)
         dummy = []
         o = next_tohlcv[1]
         h = o
         l = o
+        if len(next_tohlcv) > 5:
+            is_volume = True
+            vo = next_tohlcv[5]
+            dv = int(vo / num - 0.5)
+        else:
+            is_volume = False
+        n = len(buffer)
+        sumvol = 0
         for i, price in enumerate(buffer):
-            if i > 0:
+            if i == 0:
+                h = price
+                l = price
+            else:
                 if price > h:
                     h = price
                 if price < l:
                     l = price
-            dummy.append([t, o, h, l, price]) 
+            if is_volume:
+                sumvol += dv
+                if sumvol > vo:
+                    v = vo - sumvol
+                else:
+                    v = dv
+                dummy.append([t, o, h, l, price, v])
+            else:
+                dummy.append([t, o, h, l, price])
         return dummy
         
-
     def nextData(self):        
         if self.step_num == 0:
             self.currentIndex += 1
@@ -112,17 +130,15 @@ class DataServerStub:
             else:
                 return self.tohlcAt(self.currentIndex)
         else:
-            tohlcv = self.dummy
-            self.index += 1
-            self.step = 0
-            self.dummy_tohlcv = self.interpolate(self.index)
-            self.step = 1
-            return 
-
-
-        self.step += 1
-        
-        return self.dummy[self.step]
+            self.step += 1
+            if self.step > self.step_num:
+                self.step = 0
+                self.currentIndex += 1
+                if self.currentIndex < self.size() - 1:
+                    self.dummy = self.makeDummy(self.tohlcvAt(self.currentIndex + 1), self.step_num)
+                return self.tohlcvAt(self.currentIndex)
+            else:
+                return self.dummy[self.step - 1] 
 
     def sliceTohlcv(self, begin: int, end: int):
         out = []
@@ -131,8 +147,12 @@ class DataServerStub:
         return out
     
     def tohlcvAt(self, index):
-        return self.tohlcv[index]
-
+        if index < self.size():
+            out = [values[index] for values in self.tohlcv]
+            return out
+        else:
+            return None
+        
     def timeRange(self):
         t0 = self.tohlcv[0][0]
         t1 = self.tohlcv[0][-1]
@@ -160,9 +180,13 @@ class DataServerStub:
 def test():
     server = DataServerStub('DJI')
     server.importFile('../data/DJI_Feature_2019_08.csv')
-    tohlcv = server.init(100)
-    tohlcv = server.next()
-    pass
+    tohlcv_list = server.init(100, step_sec=10)
+    print(tohlcv_list)
+
+    for i in range(20):
+        tohlcv = server.nextData()
+        print(tohlcv)
+    
 
 
 def test1():
