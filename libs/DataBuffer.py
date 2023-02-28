@@ -22,6 +22,7 @@ class DataBuffer:
         self.interval_minutes = interval_minutes
         tohlcv_arrays, tmp_candles = self.resample(tohlcv, interval_minutes, UNIT_MINUTE)
         self.tmp_candles = tmp_candles
+        self.invalid_candle = None
         dic = self.toTohlcvDic(tohlcv_arrays)
         self.addIndicator(dic)
         self.dic = dic
@@ -74,9 +75,12 @@ class DataBuffer:
     
     # candles: tohlcv array
     def update(self, candles):
+        invalid_candle = candles[-1]
+        self.invalid_candle = invalid_candle
+        valid_candles = candles[:-1]
         tmp_candles = self.tmp_candles.copy()
         new_candles = []
-        for values  in candles:
+        for values  in valid_candles:
             t = values[0]
             t_round =  self.roundTime(t, self.interval_minutes, UNIT_MINUTE)
             if len(tmp_candles) > 0:
@@ -101,6 +105,8 @@ class DataBuffer:
 
     def temporary(self, candle):
         tmp_candles = copy.deepcopy(self.tmp_candles)
+        if self.invalid_candle is not None:
+            tmp_candles.append(self.invalid_candle)
         if len(tmp_candles) == 0:
             return self.dic[TIME][-1], self.dic.copy()
         t = tmp_candles[-1][0]

@@ -81,6 +81,7 @@ class DataServerStub:
             self.step_num = int(60 / step_sec) - 1
             self.dummy = self.makeDummy(self.tohlcvAt(self.currentIndex + 1), self.step_num)
         self.step = 0
+        self.lastValidTohlcv = self.tohlcvAt(self.currentIndex)
         return tohlcv
 
     def makeDummy(self, next_tohlcv, num):
@@ -128,7 +129,7 @@ class DataServerStub:
             if self.currentIndex > self.size() - 1:
                 return None
             else:
-                return self.tohlcAt(self.currentIndex)
+                return [self.lastValidTohlcv, self.tohlcAt(self.currentIndex)]
         else:
             self.step += 1
             if self.step > self.step_num:
@@ -136,9 +137,13 @@ class DataServerStub:
                 self.currentIndex += 1
                 if self.currentIndex < self.size() - 1:
                     self.dummy = self.makeDummy(self.tohlcvAt(self.currentIndex + 1), self.step_num)
-                return self.tohlcvAt(self.currentIndex)
+                
+                last = self.lastValidTohlcv.copy()
+                current = self.tohlcvAt(self.currentIndex)
+                self.lastValidTohlcv = current
+                return [last, current]
             else:
-                return self.dummy[self.step - 1] 
+                return [self.lastValidTohlcv, self.dummy[self.step - 1]] 
 
     def sliceTohlcv(self, begin: int, end: int):
         out = []
@@ -181,12 +186,13 @@ def test():
     server = DataServerStub('DJI')
     server.importFile('../data/DJI_Feature_2019_08.csv')
     tohlcv_list = server.init(100, step_sec=10)
-    print(tohlcv_list)
+    #print(tohlcv_list)
 
-    for i in range(20):
-        tohlcv = server.nextData()
-        print(tohlcv)
-    
+    for i in range(10):
+        [tohlcv1, tohlcv2] = server.nextData()
+        print(tohlcv1)
+        print(tohlcv2)
+        print('.')
 
 
 def test1():
