@@ -56,7 +56,10 @@ def test():
         tohlcv = server.nextData()
         print(tohlcv)
         buffer.update(tohlcv)
-    
+        c1 = buffer.candles()
+        t2, d2 = buffer.temporary()
+        c2 = buffer.dic2Candles(d2)
+        
     
 if __name__ == '__main__':
     test()    

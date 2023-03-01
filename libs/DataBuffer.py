@@ -23,10 +23,19 @@ class DataBuffer:
         tohlcv_arrays, tmp_candles = self.resample(tohlcv, interval_minutes, UNIT_MINUTE)
         self.tmp_candles = tmp_candles
         self.invalid_candle = None
-        dic = self.toTohlcvDic(tohlcv_arrays)
+        dic = self.arrays2Dic(tohlcv_arrays)
         self.addIndicator(dic)
         self.dic = dic
-
+        
+    def tohlcvDic(self):
+        return self.dic
+    
+    def candles(self):
+        return self.dic2Candles(self.dic)
+    
+    def tohlcvArrays(self):
+        return self.dic2Arrays(self.dic)
+    
     def size(self):
         return len(self.dic)
     
@@ -60,8 +69,7 @@ class DataBuffer:
         return dic
 
     def addSeqIndicator(self, dic: dict, begin: int, end: int):
-        for p in self.ta_params:
-            key, param, name = p 
+        for key, [name, param] in self.ta_params.items():
             seqIndicator(dic, key, begin, end, param, name=name)
         return dic
     
@@ -78,23 +86,7 @@ class DataBuffer:
         invalid_candle = candles[-1]
         self.invalid_candle = invalid_candle
         valid_candles = candles[:-1]
-        tmp_candles = self.tmp_candles.copy()
-        new_candles = []
-        for values  in valid_candles:
-            t = values[0]
-            t_round =  self.roundTime(t, self.interval_minutes, UNIT_MINUTE)
-            if len(tmp_candles) > 0:
-                last_time = tmp_candles[-1][0]
-            else:
-                last_time = self.dic[TIME][-1]
-            if t == t_round:    
-                tmp_candles.append(values)
-                candle = self.candlePrice(t_round, tmp_candles)
-                new_candles.append(candle)
-                tmp_candles = []
-            else:
-                if t > last_time:
-                    tmp_candles.append(values)
+        new_candles, tmp_candles = self.compositCandle(valid_candles)
         self.tmp_candles = tmp_candles
         begin = len(self.dic[TIME])
         m = len(new_candles)
@@ -102,8 +94,28 @@ class DataBuffer:
         self.merge(self.dic, new_candles)
         self.addSeqIndicator(self.dic, begin, end)
         return (begin, end)
-
-    def temporary(self, candle):
+    
+    def compositCandle(self, candles):
+        tmp_candles = self.tmp_candles.copy()
+        new_candles = []
+        for candle  in candles:
+            t = candle[0]
+            t_round =  self.roundTime(t, self.interval_minutes, UNIT_MINUTE)
+            if len(tmp_candles) > 0:
+                last_time = tmp_candles[-1][0]
+            else:
+                last_time = self.dic[TIME][-1]
+            if t == t_round:    
+                tmp_candles.append(candle)
+                c = self.candlePrice(t_round, tmp_candles)
+                new_candles.append(c)
+                tmp_candles = []
+            else:
+                if t > last_time:
+                    tmp_candles.append(candle)
+        return new_candles, tmp_candles
+        
+    def temporary(self):
         tmp_candles = copy.deepcopy(self.tmp_candles)
         if self.invalid_candle is not None:
             tmp_candles.append(self.invalid_candle)
@@ -111,14 +123,12 @@ class DataBuffer:
             return self.dic[TIME][-1], self.dic.copy()
         t = tmp_candles[-1][0]
         t_round =  self.roundTime(t, self.interval_minutes, UNIT_MINUTE)
-        if candle is not None:
-            t1 = candle[0]
-            t_round1 = self.roundTime(t1, self.interval_minutes, UNIT_MINUTE)
-            if t_round1 == t_round and t1 >= t:
-                tmp_candles.append(candle)
         new_candle = self.candlePrice(t_round, tmp_candles)
         tmp_dic = copy.deepcopy(self.dic)
         self.merge(tmp_dic, [new_candle])
+        begin = len(self.dic[TIME])
+        end = begin
+        self.addSeqIndicator(tmp_dic, begin, end)
         return tmp_candles[-1][0], tmp_dic
 
     def merge(self, dic: dict, candles):
@@ -205,17 +215,17 @@ class DataBuffer:
             candle = self.candlePrice(current_time, data_list)
             candles.append(candle)
             data_list = []
-        return self.toTohlcv(candles), data_list
+        return self.candles2Arrays(candles), data_list
 
-    def toCandles(self, tohlcv:[]):
+    def arrays2Candles(self, tohlcvArrays:[]):
         out = []
-        n = len(tohlcv[0])
+        n = len(tohlcvArrays[0])
         for i in range(n):
-            d = [array[i] for array in tohlcv]
+            d = [array[i] for array in tohlcvArrays]
             out.append(d)
         return out
 
-    def toTohlcv(self, candles:[]):
+    def candles2Arrays(self, candles:[]):
         n = len(candles)
         m = len(candles[0])
         arrays = []
@@ -224,13 +234,27 @@ class DataBuffer:
             arrays.append(array)
         return arrays
 
-    def toTohlcvDic(self, tohlcv:[]):
+    def dic2Candles(self, dic):
+        arrays = [dic[TIME], dic[OPEN], dic[HIGH], dic[LOW], dic[CLOSE]]
+        try:
+            arrays.append(dic[VOLUME])
+        except:
+            pass
+        out = []
+        for i in range(len(arrays[0])):
+            d = [] 
+            for array in arrays:
+                d.append(array[i])
+            out.append(d)
+        return out
+            
+    def arrays2Dic(self, tohlcvArrays:[]):
         dic = {}
-        dic[TIME] = tohlcv[0]
-        dic[OPEN] = tohlcv[1]
-        dic[HIGH] = tohlcv[2]
-        dic[LOW] = tohlcv[3]
-        dic[CLOSE] = tohlcv[4]
-        if len(tohlcv) > 5:
-            dic[VOLUME] = tohlcv[5]
+        dic[TIME] = tohlcvArrays[0]
+        dic[OPEN] = tohlcvArrays[1]
+        dic[HIGH] = tohlcvArrays[2]
+        dic[LOW] = tohlcvArrays[3]
+        dic[CLOSE] = tohlcvArrays[4]
+        if len(tohlcvArrays) > 5:
+            dic[VOLUME] = tohlcvArrays[5]
         return dic
