@@ -212,12 +212,14 @@ class TechnicalAnalysis:
     
 # -----
 def seqIndicator(dic: dict, key: str, begin: int, end:int, params: dict, name:str=None):
+    if name is None:
+        name = key
     n = len(dic[OPEN])
     if WINDOW in params.keys():
         window = params[WINDOW]
     else:
         window = 0
-    if not key in dic.keys():
+    if not name in dic.keys():
         data = dic
         begin = 0
         end = n - 1
@@ -232,12 +234,12 @@ def seqIndicator(dic: dict, key: str, begin: int, end:int, params: dict, name:st
     array = indicator(data, key, params, name=name, should_set=False)    
     if array is None:
         return False
-    if key in dic.keys():
+    original = dic[name]
+    if name in dic.keys():
         j = len(array) - (end - begin + 1)
-        original = data[key]
         original[begin: end + 1] = array[j:]
     else:
-        data[key] = array
+        original[name] = array
     return True
 
 def indicator(data:dict, key:str, params:dict, name:str=None, should_set=True):

@@ -6,6 +6,7 @@ Created on Tue Feb 28 14:42:24 2023
 """
 import os
 import pandas as pd
+import numpy as np
 import glob
 import pytz
 from time_util import changeTimezone, TIMEZONE_TOKYO, str2pytimeArray, pyTime
@@ -38,27 +39,64 @@ def createIndicator():
     params['SIGNAL'] = [PATTERN_MATCH, patterns]
     return params
 
-
-
+def saveCandles(filepath, candles:list):
+    f = open(filepath, mode='w')
+    for candle in candles:
+        s = ''
+        for value in candle:
+            if isNan(value):
+                s += ','
+            else:
+                s += str(value) + ','
+        s = s[:-1]
+        f.write(s + '\n')
+    f.close()
+    
+    
+def isNan(value):
+    if type(value) == float or type(value) == int:
+        return np.isnan(value)    
+    return False
+    
+def saveDic(filepath, dic):
+    f = open(filepath, mode='w')
+    arrays = []
+    for key, value in dic.items():
+        arrays.append(value)
+    header = ''
+    for key in dic.keys():
+        header += key + ','
+    header = header[:-1]
+    f.write(header + '\n')
+    for i in range(len(arrays[0])):
+        s = ''
+        for array in arrays:
+            if isNan(array[i]):
+                s += ','
+            else:
+                s += str(array[i]) + ','
+        s = s[:-1]
+        f.write(s + '\n')
+    f.close()    
+    
 def test():
     server = DataServerStub('DJI')
     server.importFile('../data/DJI_Feature_2019_08.csv')
-    tohlcv_list = server.init(100, step_sec=10)
+    tohlcv_list = server.init(100, step_sec=20)
     
     ta = createIndicator()
     buffer = DataBuffer(tohlcv_list, ta, 5)
-
-
     
     print(tohlcv_list)
-
+    #os.mkdir('../debug/')
     for i in range(20):
         tohlcv = server.nextData()
         print(tohlcv)
         buffer.update(tohlcv)
-        c1 = buffer.candles()
+        d1 = buffer.tohlcvDic()
+        saveDic(f'../debug/d1_{i}.csv', d1)
         t2, d2 = buffer.temporary()
-        c2 = buffer.dic2Candles(d2)
+        saveDic(f'../debug/d2_{i}.csv', d2)
         
     
 if __name__ == '__main__':

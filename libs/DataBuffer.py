@@ -68,8 +68,8 @@ class DataBuffer:
             indicator(dic, method, param, name=name)
         return dic
 
-    def addSeqIndicator(self, dic: dict, begin: int, end: int):
-        for key, [name, param] in self.ta_params.items():
+    def updateSeqIndicator(self, dic: dict, begin: int, end: int):
+        for name, [key, param] in self.ta_params.items():
             seqIndicator(dic, key, begin, end, param, name=name)
         return dic
     
@@ -83,35 +83,36 @@ class DataBuffer:
     
     # candles: tohlcv array
     def update(self, candles):
-        invalid_candle = candles[-1]
-        self.invalid_candle = invalid_candle
+        self.invalid_candle = candles[-1]
         valid_candles = candles[:-1]
         new_candles, tmp_candles = self.compositCandle(valid_candles)
         self.tmp_candles = tmp_candles
-        begin = len(self.dic[TIME])
         m = len(new_candles)
-        end = begin + m - 1
-        self.merge(self.dic, new_candles)
-        self.addSeqIndicator(self.dic, begin, end)
-        return (begin, end)
+        if m > 0:
+            begin = len(self.dic[TIME])        
+            end = begin + m - 1
+            self.merge(self.dic, new_candles)
+            self.updateSeqIndicator(self.dic, begin, end)
     
     def compositCandle(self, candles):
         tmp_candles = self.tmp_candles.copy()
         new_candles = []
+        last_time = self.dic[TIME][-1]
         for candle  in candles:
             t = candle[0]
+            if t <= last_time:
+                continue
             t_round =  self.roundTime(t, self.interval_minutes, UNIT_MINUTE)
-            if len(tmp_candles) > 0:
-                last_time = tmp_candles[-1][0]
-            else:
-                last_time = self.dic[TIME][-1]
             if t == t_round:    
                 tmp_candles.append(candle)
                 c = self.candlePrice(t_round, tmp_candles)
                 new_candles.append(c)
                 tmp_candles = []
             else:
-                if t > last_time:
+                if len(tmp_candles) > 0:
+                    if t > tmp_candles[-1][0]:
+                        tmp_candles.append(candle)
+                else:
                     tmp_candles.append(candle)
         return new_candles, tmp_candles
         
@@ -125,10 +126,10 @@ class DataBuffer:
         t_round =  self.roundTime(t, self.interval_minutes, UNIT_MINUTE)
         new_candle = self.candlePrice(t_round, tmp_candles)
         tmp_dic = copy.deepcopy(self.dic)
-        self.merge(tmp_dic, [new_candle])
-        begin = len(self.dic[TIME])
-        end = begin
-        self.addSeqIndicator(tmp_dic, begin, end)
+        begin = len(tmp_dic[TIME])
+        self.merge(tmp_dic, [new_candle])        
+        end = len(tmp_dic[TIME]) - 1
+        self.updateSeqIndicator(tmp_dic, begin, end)
         return tmp_candles[-1][0], tmp_dic
 
     def merge(self, dic: dict, candles):
