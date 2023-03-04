@@ -9,7 +9,7 @@ import pandas as pd
 import glob
 import pytz
 from time_util import changeTimezone, TIMEZONE_TOKYO, str2pytimeArray, pyTime
-from util import sliceTime
+from Utils import Utils
 from datetime import datetime, timedelta
 
 TimeUnit = str
@@ -175,7 +175,7 @@ class DataServerStub:
             time_from = self.tohlcv[0][0]
         if time_to is None:
             time_to = self.tohlcv[0][-1]
-        length, begin, end = sliceTime(self.tohlcv[0], time_from, time_to)
+        length, begin, end = Utils.sliceTime(self.tohlcv[0], time_from, time_to)
         if length <= 0:
             return []
         out = []

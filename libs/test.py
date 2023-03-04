@@ -10,7 +10,7 @@ import numpy as np
 import glob
 import pytz
 from time_util import changeTimezone, TIMEZONE_TOKYO, str2pytimeArray, pyTime
-from util import sliceTime
+from Utils import Utils
 from datetime import datetime, timedelta
 import random
 
@@ -82,16 +82,19 @@ def saveDic(filepath, dic):
 def test():
     server = DataServerStub('DJI')
     server.importFile('../data/DJI_Feature_2019_08.csv')
-    tohlcv_list = server.init(100, step_sec=20)
+    tohlcv_list = server.init(100, step_sec=10)
     
     ta = createIndicator()
     buffer = DataBuffer(tohlcv_list, ta, 5)
     
     print(tohlcv_list)
-    #os.mkdir('../debug/')
-    for i in range(20):
+    Utils.makeDir('../debug/')
+    for i in range(100):
         tohlcv = server.nextData()
         print(tohlcv)
+        if i == 10:
+            print(i)
+            pass
         buffer.update(tohlcv)
         d1 = buffer.tohlcvDic()
         saveDic(f'../debug/d1_{i}.csv', d1)

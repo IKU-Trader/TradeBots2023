@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 from const import TIME, OPEN, HIGH, LOW, CLOSE, VOLUME
 from const import TimeUnit, UNIT_MINUTE, UNIT_HOUR, UNIT_DAY
 from time_util import TIMEZONE_TOKYO
-from util import dic2Arrays
+from Utils import Utils
 from STA import indicator, arrays2dic, seqIndicator
 from STA import SMA, WINDOW, MA_TREND_BAND, THRESHOLD, MA_KEYS, PATTERNS, SOURCE, PATTERN_MATCH
 from STA import UPPER_TREND, UPPER_SUB_TREND, UPPER_DIP, LOWER_TREND, LOWER_SUB_TREND, LOWER_DIP, NO_TREND

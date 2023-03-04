@@ -9,7 +9,7 @@ import pandas as pd
 import glob
 import pytz
 from time_util import changeTimezone, TIMEZONE_TOKYO, str2pytimeArray, pyTime
-from util import sliceTime
+from Utils import Utils
 from datetime import datetime, timedelta
 import random
 

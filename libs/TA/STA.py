@@ -9,7 +9,7 @@ import sys
 sys.path.append("../")
 
 import numpy as np
-from util import sliceDic
+from Utils import Utils
 from MathArray import MathArray
 
 TIME = 'time'
@@ -228,9 +228,9 @@ def seqIndicator(dic: dict, key: str, begin: int, end:int, params: dict, name:st
             if begin < window:
                 data = dic
             else:
-                data = sliceDic(dic, begin - window, end)
+                data = Utils.sliceDic(dic, begin - window, end)
         else:
-            data = sliceDic(dic, begin, end)
+            data = Utils.sliceDic(dic, begin, end)
     array = indicator(data, key, params, name=name, should_set=False)    
     if array is None:
         return False
