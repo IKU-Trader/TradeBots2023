@@ -8,9 +8,9 @@ Created on Sun Dec  4 22:37:16 2022
 import datetime
 import calendar
 import pytz
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
-#TIMEZONE_TOKYO = datetime.timezone(datetime.timedelta(hours=+9), 'Asia/Tokyo')
+
 TIMEZONE_TOKYO = pytz.timezone('Asia/Tokyo')
 
 def changeTimezone(pytime_array: [datetime], tzinfo):
@@ -52,13 +52,22 @@ def pyTime(year, month, day, hour, minute, second, tzinfo):
 
 def isSummerTime(date_time):
     day0 = dayOfLastSunday(date_time.year, 3)
-    tsummer0 = utcTime(date_time.year, 3, day0, 0, 0)
+    tsummer0 = utcTime(date_time.year, 3, day0, 0, 0, 0)
     day1 = dayOfLastSunday(date_time.year, 10)
-    tsummer1 = utcTime(date_time.year, 10, day1, 0, 0)
+    tsummer1 = utcTime(date_time.year, 10, day1, 0, 0, 0)
     if date_time > tsummer0 and date_time < tsummer1:
         return True
     else:
         return False
+    
+def timestamp2jst(utc_server):
+    t = datetime.fromtimestamp(utc_server, TIMEZONE_TOKYO)
+    if isSummerTime(t):
+        dt = 1
+    else:
+        dt = 2
+    t -= timedelta(hours=dt)
+    return t
     
 def jst2timestamp(jst):
     timestamp = []
