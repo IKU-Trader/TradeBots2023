@@ -6,9 +6,9 @@ Created on Tue Jan  3 16:25:10 2023
 """
 
 import sys
-#sys.path.append("../libs")
-#sys.path.append("../libs/PyCandleChart")
-#sys.path.append("../libs/TA")
+sys.path.append("../libs")
+sys.path.append("../libs/PyCandleChart")
+sys.path.append("../libs/TA")
 
 from DataServerStub import DataServerStub
 from DataBuffer import DataBuffer
@@ -19,13 +19,19 @@ from TA.STA import TechnicalAnalysis as ta
 from libs.const import const
 from libs.Utils import Utils
 
-
+def dateStr(t):
+    s = f'{t.year}/{t.month}/{t.day}'
+    return s
+    
 def day_trade(tohlcv:dict, year:int, month:int, day:int):
     #t0 = pyTime(year, month, day, 0, 0, 0, TIMEZONE_TOKYO)
     t = TimeUtils.pyTime(year, month, day, 20, 0, 0, TimeUtils.TIMEZONE_TOKYO)
     dic = Utils.sliceTohlcvWithLength(tohlcv, t, 24 * 60 / 5)
     fig, axes = gridFig([8, 1], (30, 5))
-    chart1 = CandleChart(fig, axes[0], 'dji')
+    t0 = dic[const.TIME][0]
+    t1 = dic[const.TIME][-1]
+    title = 'dji ' + dateStr(t0) + '-' + dateStr(t1)
+    chart1 = CandleChart(fig, axes[0], title, date_format=CandleChart.DATE_FORMAT_DAY_HOUR)
     chart1.drawCandle(dic)
     chart1.drawLine(dic[const.TIME], dic['SMA5'], label='SMA5')
     chart1.drawLine(dic[const.TIME], dic['SMA20'], color='green', label='SMA20')
@@ -35,8 +41,7 @@ def day_trade(tohlcv:dict, year:int, month:int, day:int):
     chart1.drawMarkers(dic[const.TIME], dic[const.HIGH], 
                        50, dic['SIGNAL'], -1, '^', 'red', overlay=1, markersize=20)
     chart1.drawMarkers(dic[const.TIME], dic[const.HIGH], 50, dic['SIGNAL'], -2, '^', 'red', overlay=2, markersize=20)
-    
-    chart2 = BandPlot(fig, axes[1], 'MA Trend')
+    chart2 = BandPlot(fig, axes[1], 'MA Trend', date_format=CandleChart.DATE_FORMAT_DAY_HOUR)
     colors = {ta.UPPER_TREND: 'red',
               ta.UPPER_SUB_TREND: Colors.light_red,
               ta.UPPER_DIP: 'black',

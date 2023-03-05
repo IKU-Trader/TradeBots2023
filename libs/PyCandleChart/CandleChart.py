@@ -22,9 +22,7 @@ from Utils import Utils
 from TimeUtils import TimeUtils
 from const import const
 
-DATE_FORMAT_TIME = '%H:%M'
-DATE_FORMAT_DAY = '%m-%d'
-DATE_FORMAT_DAY_TIME = '%m-%d %H:%M'
+
 
 class colors():    
     @property
@@ -186,7 +184,14 @@ class BoxGraphic:
 # -----
 
 class CandleChart:
-    def __init__(self, fig, ax, title, date_format=DATE_FORMAT_TIME):
+    DATE_FORMAT_TIME = '%H:%M'
+    DATE_FORMAT_DAY = '%m-%d'
+    DATE_FORMAT_DATE_TIME = '%m-%d %H:%M'
+    DATE_FORMAT_DAY_HOUR = '%d/%H'
+    
+    def __init__(self, fig, ax, title, date_format=None):
+        if date_format is None:
+            date_format = self.DATE_FORMAT_TIME
         self.fig = fig
         self.ax = ax
         self.title = title
@@ -229,6 +234,16 @@ class CandleChart:
         tick = self.ticks(time[0], time[-1], tick_minutes)        
         self.ax.set_xticks(tick)
         self.ax.set_xlim(t0, t1)
+        self.drawTimeRange(time[0], time[-1])
+        
+    def drawTimeRange(self, time0, time1):
+        form = '%Y-%m-%d %H:%M'
+        self.drawText(time0, self.yPos(0.95), '  From: ' + time0.strftime(form))
+        self.drawText(time0, self.yPos(0.90), '  To    : ' + time1.strftime(form))
+
+    def yPos(self, rate):
+        r = self.getYlimit()
+        return (r[1] - r[0]) * rate + r[0]
     
     def ticks(self, t0, t1, dt_minutes):
         tm = int(t0.minute / dt_minutes) * dt_minutes
@@ -318,7 +333,9 @@ class CandleChart:
         return self.ax.get_ylim()
         
 class BandPlot:
-    def __init__(self, fig, ax, title, date_format=DATE_FORMAT_TIME):
+    def __init__(self, fig, ax, title, date_format=None):
+        if date_format is None:
+            date_format = CandleChart.DATE_FORMAT_TIME
         self.fig = fig
         self.ax = ax
         self.title = title
