@@ -12,6 +12,39 @@ import MetaTrader5 as mt5
 from mt5_const import mt5_const as const
 from TimeUtils import TimeUtils
 from datetime import datetime
+
+
+class Order:
+    typ = int 
+    BuyEntry: typ = 0
+    SellEntry: typ = 1
+    
+    kind = int 
+    MarketOrder: kind = 0
+    Limit: kind = 1
+    Stop: kind = 2
+    
+    def __init__(self, symbol, lot, price, typ: typ, kind, magic_number):
+        self.symbol = symbol
+        if typ == Order.BuyEntry:
+            if kind == Order.MarketOrder:
+                self.type = mt5.ORDER_TYPE_BUY
+            elif kind == Order.Limit:
+                self.type = mt5.ORDER_TYPE_BUY_LIMIT
+            elif kind == Order.Stop:
+                self.type = mt5.ORDER_TYPE_BUY_STOP
+        elif typ == Order.SellEntry:
+            if kind == Order.MarketOrder:
+                self.type = mt5.ORDER_TYPE_SELL
+        self.lot = lot
+        self.price = price
+        self.magic_number = magic_number
+        
+class BuyMarketOrder(Order):
+    def __init__(self, symbol, lot, price):
+        super().__init__(symbol, lot, price, 
+                         Order.BuyEntry, Order.MarketOrder, 1000)
+
  
 class PyMT5:
     def __init__(self, market: str):
@@ -69,11 +102,68 @@ class PyMT5:
         utc_from = self.jst2serverTime(from_jst)
         d = mt5.copy_ticks_from(self.stock, const.TIMEFRAME[timeframe][0] , utc_from, size, mt5.COPY_TICKS_ALL) 
         return self.convert(d)
+    
+    def accountInfo(self):
+        dic = {}
+        info = mt5.account_info()
+        if info is None:
+            print(f"Retreiving account information failed")
+            return dic
+        dic['balance'] = info.balance
+        dic['credit'] = info.credit
+        dic['profit'] = info.profit
+        dic['equity'] = info.equity
+        dic['margin'] = info.margin
+        dic['margin_free'] = info.margin_free
+        dic['margin_level'] = info.margin_level
+        dic['margin_so_call'] = info.margin_so_call
+        dic['currency'] = info.currency                
+        return dic
+
+
+    def positions(self, symbol: str):
+        pos = mt5.positions_get(group='*'+symbol+'*')
+        buy_positions = []
+        sell_positions = []
+        for p in pos:
+            order_type = p[5]
+            profit = p[15]
+            lot = [9]
+            price = [10]
+            if order_type == 0: # buy
+                buy_positions.append([lot, profit, price])
+            elif order_type == 1: # sellポジションの場合
+                sell_positions.append([lot, profit, price])
+        return (buy_positions, sell_positions)
+    
+    
+    def order(self, request: Order):
+        request = {
+                'symbol': request.symbol,
+                'action': mt5.TRADE_ACTION_DEAL,
+                'type': request.type,
+                'volume': request.lot,
+                'price': request.price,
+                'deviation': request.slippage,
+                'comment': 'first_buy',
+                'magic': magic_number,
+                'type_time': mt5.ORDER_TIME_GTC, # 注文有効期限
+                'type_filling': mt5.ORDER_FILLING_IOC, # 注文タイプ
+                }
+        result = mt5.order_send(request)
+
 
 # -----
     
 def test(size):
     server = PyMT5('USDJPY')
+    
+    info = server.accountInfo()
+    print(info)
+    
+    positions = server.positions('DJI')
+    print(positions)
+    
     ohlcv, dic =  server.download('M1', size=size) 
     print(ohlcv)
     print(dic[const.TIMEJST])
