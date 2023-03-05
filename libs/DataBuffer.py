@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+"""
+Created on Sun Dec  4 22:37:16 2022
+
+@author: IKU-Trader
+"""
+
 import sys
 sys.path.append("./TA")
 
@@ -6,13 +12,11 @@ import pandas as pd
 import numpy as np
 import copy
 from datetime import datetime, timedelta
-from const import TIME, OPEN, HIGH, LOW, CLOSE, VOLUME
-from const import TimeUnit, UNIT_MINUTE, UNIT_HOUR, UNIT_DAY
-from time_util import TIMEZONE_TOKYO
+from const import const
+from TimeUtils import TimeUtils
+
 from Utils import Utils
-from STA import indicator, arrays2dic, seqIndicator
-from STA import SMA, WINDOW, MA_TREND_BAND, THRESHOLD, MA_KEYS, PATTERNS, SOURCE, PATTERN_MATCH
-from STA import UPPER_TREND, UPPER_SUB_TREND, UPPER_DIP, LOWER_TREND, LOWER_SUB_TREND, LOWER_DIP, NO_TREND
+from STA import TechnicalAnalysis as ta
 from MathArray import MathArray
 
 class DataBuffer:
@@ -20,7 +24,7 @@ class DataBuffer:
     def __init__(self, tohlcv:[[]], ta_params: [], interval_minutes: int):
         self.ta_params = ta_params
         self.interval_minutes = interval_minutes
-        tohlcv_arrays, tmp_candles = self.resample(tohlcv, interval_minutes, UNIT_MINUTE)
+        tohlcv_arrays, tmp_candles = self.resample(tohlcv, interval_minutes, const.UNIT_MINUTE)
         self.tmp_candles = tmp_candles
         self.invalid_candle = None
         dic = self.arrays2Dic(tohlcv_arrays)
@@ -34,7 +38,7 @@ class DataBuffer:
         return self.dic2Candles(self.dic)
     
     def tohlcvArrays(self):
-        return self.dic2Arrays(self.dic)
+        return Utils.dic2Arrays(self.dic)
     
     def size(self):
         return len(self.dic)
@@ -42,20 +46,20 @@ class DataBuffer:
     
     def lastTime(self):
         if self.size() > 0:
-            return self.data[TIME][-1]
+            return self.data[const.TIME][-1]
         else:
             return None
         
     def deltaTime(self):
         if self.size() > 1:
-            time = self.data[TIME]
+            time = self.data[const.TIME]
             dt = time[1] - time[0]
             return dt
         else:
             return None
         
     def needSize(self):
-        t1 = datetime.now(TIMEZONE_TOKYO)
+        t1 = datetime.now(const.TIMEZONE_TOKYO)
         t0 = self.lastTime()
         n = (t1 - t0) / self.deltaTime()
         n = int(n + 0.5) +1
@@ -65,17 +69,17 @@ class DataBuffer:
     def addIndicator(self, dic: dict):
         for name, value in self.ta_params.items():
             method, param = value 
-            indicator(dic, method, param, name=name)
+            ta.indicator(dic, method, param, name=name)
         return dic
 
     def updateSeqIndicator(self, dic: dict, begin: int, end: int):
         for name, [key, param] in self.ta_params.items():
-            seqIndicator(dic, key, begin, end, param, name=name)
+            ta.seqIndicator(dic, key, begin, end, param, name=name)
         return dic
     
     # dic: tohlcv+ array dict
     def deleteLastData(self, dic):
-        keys, arrays = dic2Arrays(dic)
+        keys, arrays = Utils.dic2Arrays(dic)
         out = {}
         for key, array in zip(keys, arrays):
             out[key] = array[:-1]
@@ -89,7 +93,7 @@ class DataBuffer:
         self.tmp_candles = tmp_candles
         m = len(new_candles)
         if m > 0:
-            begin = len(self.dic[TIME])        
+            begin = len(self.dic[const.TIME])        
             end = begin + m - 1
             self.merge(self.dic, new_candles)
             self.updateSeqIndicator(self.dic, begin, end)
@@ -97,12 +101,12 @@ class DataBuffer:
     def compositCandle(self, candles):
         tmp_candles = self.tmp_candles.copy()
         new_candles = []
-        last_time = self.dic[TIME][-1]
+        last_time = self.dic[const.TIME][-1]
         for candle  in candles:
             t = candle[0]
             if t <= last_time:
                 continue
-            t_round =  self.roundTime(t, self.interval_minutes, UNIT_MINUTE)
+            t_round =  self.roundTime(t, self.interval_minutes, const.UNIT_MINUTE)
             if t == t_round:    
                 tmp_candles.append(candle)
                 c = self.candlePrice(t_round, tmp_candles)
@@ -121,19 +125,19 @@ class DataBuffer:
         if self.invalid_candle is not None:
             tmp_candles.append(self.invalid_candle)
         if len(tmp_candles) == 0:
-            return self.dic[TIME][-1], self.dic.copy()
+            return self.dic[const.TIME][-1], self.dic.copy()
         t = tmp_candles[-1][0]
-        t_round =  self.roundTime(t, self.interval_minutes, UNIT_MINUTE)
+        t_round =  self.roundTime(t, self.interval_minutes, const.UNIT_MINUTE)
         new_candle = self.candlePrice(t_round, tmp_candles)
         tmp_dic = copy.deepcopy(self.dic)
-        begin = len(tmp_dic[TIME])
+        begin = len(tmp_dic[const.TIME])
         self.merge(tmp_dic, [new_candle])        
-        end = len(tmp_dic[TIME]) - 1
+        end = len(tmp_dic[const.TIME]) - 1
         self.updateSeqIndicator(tmp_dic, begin, end)
         return tmp_candles[-1][0], tmp_dic
 
     def merge(self, dic: dict, candles):
-        index = {TIME: 0, OPEN: 1, HIGH: 2, LOW: 3, CLOSE: 4, VOLUME: 5}
+        index = {const.TIME: 0, const.OPEN: 1, const.HIGH: 2, const.LOW: 3, const.CLOSE: 4, const.VOLUME: 5}
         n = len(candles)
         blank = MathArray.full(n, np.nan)
         for key, array in dic.items():
@@ -145,21 +149,21 @@ class DataBuffer:
                 array += blank.copy()
         return
 
-    def roundTime(self, time: datetime, interval: int, unit: TimeUnit):
+    def roundTime(self, time: datetime, interval: int, unit: const.TimeUnit):
         zone = time.tzinfo
-        if unit == UNIT_MINUTE:
+        if unit == const.UNIT_MINUTE:
             t = datetime(time.year, time.month, time.day, time.hour, 0, 0, tzinfo=zone)
-        elif unit == UNIT_HOUR:
+        elif unit == const.UNIT_HOUR:
             t = datetime(time.year, time.month, time.day, 0, 0, 0, tzinfo=zone)
-        elif unit == UNIT_DAY:
+        elif unit == const.UNIT_DAY:
             t = datetime(time.year, time.month, time.day, 0, 0, 0, tzinfo=zone)
             return t
         if t == time:
             return t
         while t < time:
-            if unit == UNIT_MINUTE:
+            if unit == const.UNIT_MINUTE:
                 t += timedelta(minutes=interval)
-            elif unit == UNIT_HOUR:
+            elif unit == const.UNIT_HOUR:
                 t += timedelta(hours=interval)
         return t
 
@@ -180,7 +184,7 @@ class DataBuffer:
             return [time, o, h, l, c]
     
     # tohlcv: tohlcv arrays
-    def resample(self, tohlcv: [], interval: int, unit: TimeUnit):        
+    def resample(self, tohlcv: [], interval: int, unit: const.TimeUnit):        
         time = tohlcv[0]
         n = len(time)
         op = tohlcv[1]
@@ -236,9 +240,9 @@ class DataBuffer:
         return arrays
 
     def dic2Candles(self, dic):
-        arrays = [dic[TIME], dic[OPEN], dic[HIGH], dic[LOW], dic[CLOSE]]
+        arrays = [dic[const.TIME], dic[const.OPEN], dic[const.HIGH], dic[const.LOW], dic[const.CLOSE]]
         try:
-            arrays.append(dic[VOLUME])
+            arrays.append(dic[const.VOLUME])
         except:
             pass
         out = []
@@ -251,11 +255,11 @@ class DataBuffer:
             
     def arrays2Dic(self, tohlcvArrays:[]):
         dic = {}
-        dic[TIME] = tohlcvArrays[0]
-        dic[OPEN] = tohlcvArrays[1]
-        dic[HIGH] = tohlcvArrays[2]
-        dic[LOW] = tohlcvArrays[3]
-        dic[CLOSE] = tohlcvArrays[4]
+        dic[const.TIME] = tohlcvArrays[0]
+        dic[const.OPEN] = tohlcvArrays[1]
+        dic[const.HIGH] = tohlcvArrays[2]
+        dic[const.LOW] = tohlcvArrays[3]
+        dic[const.CLOSE] = tohlcvArrays[4]
         if len(tohlcvArrays) > 5:
-            dic[VOLUME] = tohlcvArrays[5]
+            dic[const.VOLUME] = tohlcvArrays[5]
         return dic

@@ -14,7 +14,7 @@ from TimeUtils import TimeUtils
 from datetime import datetime
  
 class PyMT5:
-    def __init__(self, market):
+    def __init__(self, market: str):
         self.market = market
         if not mt5.initialize():
             print("initialize() failed")
@@ -24,7 +24,7 @@ class PyMT5:
     def close(self):
         mt5.shutdown()
     
-    def convert(self, data):
+    def convert(self, data: list):
         if data is None:
             return ([], {})
         timeJst = []

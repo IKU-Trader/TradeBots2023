@@ -9,7 +9,6 @@ import calendar
 import pytz
 from datetime import datetime, timezone, timedelta
 
-
 class TimeUtils:
 
     TIMEZONE_TOKYO = pytz.timezone('Asia/Tokyo')
@@ -56,6 +55,11 @@ class TimeUtils:
         time = tzinfo.localize(t)
         return time
     
+    @staticmethod
+    def awarePytime2naive(time):
+        naive = datetime(time.year, time.month, time.day, time.hour, time.minute, time.second)
+        return naive
+
     @staticmethod
     def isSummerTime(date_time):
         day0 = TimeUtils.dayOfLastSunday(date_time.year, 3)

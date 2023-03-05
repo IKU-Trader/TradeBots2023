@@ -2,15 +2,14 @@
 """
 Created on Sat Jan 22 20:24:47 2022
 
-@author: docs9
+@author: IKU-Trader
 """
 
 import os
 import pandas as pd
 import numpy as np
-from const import TIME, OPEN, HIGH, LOW, CLOSE, VOLUME
-from time_util import npDateTime2pyDatetime
-
+from const import const
+from TimeUtils import TimeUtils
 
 class Utils:
 
@@ -44,7 +43,7 @@ class Utils:
             d = None
             if column.lower() == time_key.lower():
                 nptime = df[column].values
-                pytime = [npDateTime2pyDatetime(t) for t in nptime]
+                pytime = [TimeUtils.npDateTime2pyDatetime(t) for t in nptime]
                 if is_numpy:
                     d = nptime
                 else:
@@ -70,15 +69,12 @@ class Utils:
     def dic2df(dic):
         keys = list(dic.keys())
         values = list(dic.values())
-    
         length = []
         for value in values:
             n = len(value)
             length.append(n)
-        
         if(min(length) != max(length)):
             return None
-        
         out = []
         for i in range(n):
             d = []
@@ -174,7 +170,7 @@ class Utils:
     @staticmethod            
     def sliceTohlcv(tohlcv, time_from, time_to):
         if type(tohlcv) == dict:
-            time = tohlcv[TIME]
+            time = tohlcv[const.TIME]
         else:
             time = tohlcv[0]
         if time_from is None:        
@@ -217,7 +213,7 @@ class Utils:
     @staticmethod    
     def sliceTohlcvWithLength(tohlcv, t, length):
         if type(tohlcv) == dict:
-            time = tohlcv[TIME]
+            time = tohlcv[const.TIME]
         else:
             time = tohlcv[0]    
         (begin, index, end) = Utils.findTime(time, t, length)
@@ -231,8 +227,4 @@ class Utils:
             for array in tohlcv:
                 out.append(array[begin: end + 1])
             return out
-    
-    
-    
-    
     

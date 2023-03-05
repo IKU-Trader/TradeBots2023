@@ -8,8 +8,9 @@ import os
 import pandas as pd
 import glob
 import pytz
-from time_util import changeTimezone, TIMEZONE_TOKYO, str2pytimeArray, pyTime
+from TimeUtils import TimeUtils
 from Utils import Utils
+from const import const
 from datetime import datetime, timedelta
 import random
 
@@ -47,8 +48,8 @@ class DataServerStub:
         return tohlcv
     
     def parseTime(self, tohlcv:[]):
-        time = str2pytimeArray(tohlcv[0], pytz.utc)
-        jst = changeTimezone(time, TIMEZONE_TOKYO)
+        time = TimeUtils.str2pytimeArray(tohlcv[0], pytz.utc)
+        jst = TimeUtils.changeTimezone(time, TimeUtils.TIMEZONE_TOKYO)
         index = sortIndex(jst)        
         jst = sortWithIndex(jst, index)
         out = [jst]
@@ -198,8 +199,8 @@ def test():
 def test1():
     server = DataServerStub('DJI')
     server.importFile('../data/DJI_Feature_2019_08.csv')
-    t0 = pyTime(2019, 8, 9, 0, 0, 0, TIMEZONE_TOKYO)
-    t1 = pyTime(2019, 8, 10, 0, 0, 0, TIMEZONE_TOKYO)
+    t0 = TimeUtils.pyTime(2019, 8, 9, 0, 0, 0, TimeUtils.TIMEZONE_TOKYO)
+    t1 = TimeUtils.pyTime(2019, 8, 10, 0, 0, 0, TimeUtils.TIMEZONE_TOKYO)
     candles = server.getCandles()
     df = pd.DataFrame(data=candles, columns=['Time', 'Open', 'High', 'Low', 'Close', 'Volume'])
     df.to_csv('validation.csv', index=False)
