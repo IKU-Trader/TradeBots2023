@@ -228,14 +228,13 @@ class CloseSellPostionMarketOrder(Order):
                          None,
                          3001,
                          ticket)        
-    
         
 class PyMT5:
     def __init__(self):
         if not mt5.initialize():
             print("initialize() failed")
             mt5.shutdown()
-        print('Version: ', mt5.version())
+        print('MetaTrader5 connected, API Ver: ', mt5.version())
     
     def close(self):
         mt5.shutdown()
@@ -271,19 +270,19 @@ class PyMT5:
         dic[const.VOLUME] = arrays[4]
         return (ohlcv, dic)
      
-    def download(self, timeframe: str, size: int=99999):
-        d = mt5.copy_rates_from_pos(self.market, const.TIMEFRAME[timeframe][0] , 0, size) 
+    def download(self, symbol: str, timeframe: str, size: int=99999):
+        d = mt5.copy_rates_from_pos(symbol, const.TIMEFRAME[timeframe][0] , 0, size) 
         return self.convert(d)
 
-    def downloadRange(self, timeframe: str, begin_jst: datetime, end_jst: datetime):
+    def downloadRange(self, symbol: str, timeframe: str, begin_jst: datetime, end_jst: datetime):
         utc_from = self.jst2serverTime(begin_jst)
         utc_to = self.jst2serverTime(end_jst)
-        d = mt5.copy_rates_range(self.stock, const.TIMEFRAME[timeframe][0] , utc_from, utc_to) 
+        d = mt5.copy_rates_range(symbol, const.TIMEFRAME[timeframe][0] , utc_from, utc_to) 
         return self.convert(d)
     
-    def downloadTicks(self, timeframe: str, from_jst: datetime, size: int=100000):
+    def downloadTicks(self, symbol: str, timeframe: str, from_jst: datetime, size: int=100000):
         utc_from = self.jst2serverTime(from_jst)
-        d = mt5.copy_ticks_from(self.stock, const.TIMEFRAME[timeframe][0] , utc_from, size, mt5.COPY_TICKS_ALL) 
+        d = mt5.copy_ticks_from(symbol, const.TIMEFRAME[timeframe][0] , utc_from, size, mt5.COPY_TICKS_ALL) 
         return self.convert(d)
     
     def accountInfo(self):
@@ -345,9 +344,6 @@ class PyMT5:
         order = SellMarketOrder(symbol, lot, slippage, stoploss, takeprofit)
         return self.sendOrder(order)
             
-    
-        
-        
     def sendOrder(self, order: Order):
         request = {
                     'action': order.action,
@@ -403,7 +399,7 @@ def test(size):
 
 def test1():
     server = PyMT5()
-    ret = server.buyMarketOrder('USDJPY', 0.05)
+    ret = server.buyMarketOrder('USDJPY', 0.5)
     print(ret)
     
 def test2():
@@ -412,4 +408,4 @@ def test2():
     print(ret)
     
 if __name__ == "__main__":
-    test2()
+    test1()
