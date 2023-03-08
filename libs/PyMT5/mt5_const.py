@@ -18,13 +18,7 @@ class mt5_const:
     GEM_COMODITY = ['WTIUSD', 'XAUUSD', 'XAGUSD']
     GEM = GEM_INDEX + GEM_COMODITY + GEM_FX
     
-    TIMEJST = 'timejst'
     TIMESTAMP = 'timestamp'
-    OPEN = 'open'
-    HIGH = 'high'
-    LOW = 'low'
-    CLOSE = 'close'
-    VOLUME = 'volume'
         
     UNIT_MINUTE = 'MINUTE'
     UNIT_HOUR = 'HOUR'

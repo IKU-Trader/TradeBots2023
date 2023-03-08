@@ -5,7 +5,6 @@ Created on Wed Jan  4 22:24:47 2023
 @author: IKU-Trader
 """
 
-
 class const:
     TIME = 'time'
     OPEN = 'open'

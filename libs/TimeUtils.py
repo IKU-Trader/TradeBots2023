@@ -14,7 +14,7 @@ class TimeUtils:
     TIMEZONE_TOKYO = pytz.timezone('Asia/Tokyo')
 
     @staticmethod
-    def changeTimezone(pytime_array: [datetime], tzinfo):
+    def changeTimezone(pytime_array: list, tzinfo):
         out =[]
         for i in range(len(pytime_array)):
             t = pytime_array[i].astimezone(tzinfo)
@@ -22,7 +22,7 @@ class TimeUtils:
         return out
        
     @staticmethod
-    def str2pytimeArray(time_str_array: [str], tzinfo, form='%Y-%m-%d %H:%M:%S'):
+    def str2pytimeArray(time_str_array: list, tzinfo, form='%Y-%m-%d %H:%M:%S'):
         out = []
         for s in time_str_array:
             i = s.find('+')
@@ -72,8 +72,10 @@ class TimeUtils:
             return False
         
     @staticmethod
-    def timestamp2jst(utc_server):
-        t = datetime.fromtimestamp(utc_server, TimeUtils.TIMEZONE_TOKYO)
+    def timestamp2localtime(utc_server, tzinfo=None):
+        if tzinfo is None:
+            tzinfo = TimeUtils.TIMEZONE_TOKYO 
+        t = datetime.fromtimestamp(utc_server, tzinfo)
         if TimeUtils.isSummerTime(t):
             dt = 1
         else:
@@ -99,3 +101,4 @@ class TimeUtils:
     def numpyDateTime2pyDatetime(np_time):
         py_time = datetime.fromtimestamp(np_time.astype(datetime) * 1e-9)
         return py_time    
+    

@@ -9,7 +9,8 @@ import sys
 sys.path.append('../')
 
 import MetaTrader5 as mt5
-from mt5_const import mt5_const as const
+from mt5_const import mt5_const
+from const import const
 from TimeUtils import TimeUtils
 from datetime import datetime
 
@@ -230,11 +231,12 @@ class CloseSellPostionMarketOrder(Order):
                          ticket)        
         
 class PyMT5:
-    def __init__(self):
+    def __init__(self, timezone):
         if not mt5.initialize():
             print("initialize() failed")
             mt5.shutdown()
         print('MetaTrader5 connected, API Ver: ', mt5.version())
+        self.tzinfo = timezone
     
     def close(self):
         mt5.shutdown()
@@ -242,47 +244,42 @@ class PyMT5:
     def convert(self, data: list):
         if data is None:
             return ([], {})
-        timeJst = []
-        timestamp = []
+        localtime = []
         arrays = []
         for i in range(5):
             arrays.append([])
-        ohlcv = []
         for d in data:
             values = list(d)
-            jst = TimeUtils.timestamp2jst(values[0])
-            timeJst.append(jst)
-            timestamp.append(jst.timestamp())
+            time = TimeUtils.timestamp2localtime(values[0], tzinfo=self.tzinfo)
+            localtime.append(time)
             for i in range(5):
                 if i == 4:
                     j = 7
                 else:
                     j = i + 1
                 arrays[i].append(values[j])
-            ohlcv.append([values[1], values[2], values[3], values[4]])
         dic = {}
-        dic[const.TIMEJST] = timeJst
-        dic[const.TIMESTAMP] = timestamp
+        dic[const.TIME] = localtime
         dic[const.OPEN] = arrays[0]
         dic[const.HIGH] = arrays[1]
         dic[const.LOW] = arrays[2]
         dic[const.CLOSE] = arrays[3]
         dic[const.VOLUME] = arrays[4]
-        return (ohlcv, dic)
+        return dic
      
     def download(self, symbol: str, timeframe: str, size: int=99999):
-        d = mt5.copy_rates_from_pos(symbol, const.TIMEFRAME[timeframe][0] , 0, size) 
+        d = mt5.copy_rates_from_pos(symbol, mt5_const.TIMEFRAME[timeframe][0] , 0, size) 
         return self.convert(d)
 
     def downloadRange(self, symbol: str, timeframe: str, begin_jst: datetime, end_jst: datetime):
-        utc_from = self.jst2serverTime(begin_jst)
-        utc_to = self.jst2serverTime(end_jst)
-        d = mt5.copy_rates_range(symbol, const.TIMEFRAME[timeframe][0] , utc_from, utc_to) 
+        utc_from = TimeUtils.jst2serverTime(begin_jst)
+        utc_to = TimeUtils.jst2serverTime(end_jst)
+        d = mt5.copy_rates_range(symbol, mt5_const.TIMEFRAME[timeframe][0] , utc_from, utc_to) 
         return self.convert(d)
     
     def downloadTicks(self, symbol: str, timeframe: str, from_jst: datetime, size: int=100000):
-        utc_from = self.jst2serverTime(from_jst)
-        d = mt5.copy_ticks_from(symbol, const.TIMEFRAME[timeframe][0] , utc_from, size, mt5.COPY_TICKS_ALL) 
+        utc_from = TimeUtils.jst2serverTime(from_jst)
+        d = mt5.copy_ticks_from(symbol, mt5_const.TIMEFRAME[timeframe][0] , utc_from, size, mt5.COPY_TICKS_ALL) 
         return self.convert(d)
     
     def accountInfo(self):
@@ -382,30 +379,10 @@ class PyMT5:
         order = CloseSellPostionMarketOrder(symbol, lot, ticket)
         return self.sendOrder(order)
 
-# -----
+def test():
+    server = PyMT5(TimeUtils.TIMEZONE_TOKYO)
+    dic = server.download('DOWUSD', 'M5', 5)
+    print(dic)
     
-def test(size):
-    server = PyMT5()
-    
-    info = server.accountInfo()
-    print(info)
-    
-    positions = server.positions('USDJPY')
-    print(positions)
-    
-    ohlcv, dic =  server.download('M1', size=size) 
-    print(ohlcv)
-    print(dic[const.TIMEJST])
-
-def test1():
-    server = PyMT5()
-    ret = server.buyMarketOrder('USDJPY', 0.5)
-    print(ret)
-    
-def test2():
-    server = PyMT5()
-    ret = server.closeBuyPositionMarketOrder('USDJPY', 0.05, 1185114)
-    print(ret)
-    
-if __name__ == "__main__":
-    test1()
+if __name__ == '__main__':
+    test()

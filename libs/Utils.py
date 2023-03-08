@@ -110,7 +110,7 @@ class Utils:
 
     @staticmethod        
     def sliceDic(dic, begin, end):
-        keys = dic.keys()
+        keys = list(dic.keys())
         arrays = []
         for key in keys:
             arrays.append(dic[key])
@@ -118,6 +118,15 @@ class Utils:
         for key, array in zip(keys, arrays):
             out[key] = array[begin: end + 1]
         return out
+    
+    @staticmethod
+    def sliceDicLast(dic, size):
+        keys = list(dic.keys())
+        n = len(dic[keys[0]])
+        begin = n - size
+        if begin < 0:
+            begin = 0
+        return Utils.sliceDic(dic, begin, n - 1)
     
     @staticmethod            
     def dic2Arrays(dic):
