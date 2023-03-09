@@ -9,9 +9,9 @@ import sys
 sys.path.append("../")
 
 import numpy as np
-from Utils import Utils
-from MathArray import MathArray
-from const import const
+from ..Utils import Utils
+from ..MathArray import MathArray
+from ..const import const
 
 def nans(length):
     out = []

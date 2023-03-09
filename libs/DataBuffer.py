@@ -12,12 +12,12 @@ import pandas as pd
 import numpy as np
 import copy
 from datetime import datetime, timedelta
-from const import const
-from TimeUtils import TimeUtils
+from .const import const
+from .TimeUtils import TimeUtils
 
-from Utils import Utils
-from STA import TechnicalAnalysis as ta
-from MathArray import MathArray
+from .Utils import Utils
+from .TA.STA import TechnicalAnalysis as ta
+from .MathArray import MathArray
 
 class DataBuffer:
     # tohlcv: arrays ( time array, open array, ...)

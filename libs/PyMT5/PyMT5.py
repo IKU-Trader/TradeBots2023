@@ -9,9 +9,9 @@ import sys
 sys.path.append('../')
 
 import MetaTrader5 as mt5
-from mt5_const import mt5_const
-from const import const
-from TimeUtils import TimeUtils
+from .mt5_const import mt5_const
+from ..const import const
+from ..TimeUtils import TimeUtils
 from datetime import datetime
 
 class Order:

@@ -8,8 +8,8 @@ Created on Sat Jan 22 20:24:47 2022
 import os
 import pandas as pd
 import numpy as np
-from const import const
-from TimeUtils import TimeUtils
+from .const import const
+from .TimeUtils import TimeUtils
 
 class Utils:
 
