@@ -136,7 +136,7 @@ class BuyLimitOrder(Order):
                          slippage,
                          sl,
                          tp,
-                         1002,
+                         1001,
                          None)
         
 class SellLimitOrder(Order):
@@ -178,7 +178,7 @@ class BuyStopOrder(Order):
                          slippage,
                          sl,
                          tp,
-                         1003,
+                         1002,
                          None)
 
 class SellStopOrder(Order):
@@ -227,7 +227,7 @@ class CloseSellPostionMarketOrder(Order):
                          None,
                          None,
                          None,
-                         3001,
+                         3002,
                          ticket)        
         
 class PyMT5:

@@ -72,10 +72,14 @@ class TimeUtils:
             return False
         
     @staticmethod
-    def timestamp2localtime(utc_server, tzinfo=None):
+    def timestamp2localtime(utc_server, tzinfo=None, adjust_summer_time=True):
         if tzinfo is None:
-            tzinfo = TimeUtils.TIMEZONE_TOKYO 
-        t = datetime.fromtimestamp(utc_server, tzinfo)
+            t = datetime.fromtimestamp(utc_server)
+        else:
+            t = datetime.fromtimestamp(utc_server, tzinfo)
+        if tzinfo is None or adjust_summer_time == False:
+            return t
+            
         if TimeUtils.isSummerTime(t):
             dt = 1
         else:
