@@ -14,12 +14,12 @@ from yahoo_finance_api2 import share as api
 from yahoo_finance_api2.exceptions import YahooFinanceError
 
 class YahooFinanceApi:
-    TIMEFRAMES = {'M1': [api.PERIOD_TYPE_DAY, 1,  api.FREQUENCY_TYPE_MINUTE, 1],
-                  'M5': [api.PERIOD_TYPE_DAY, 1,  api.FREQUENCY_TYPE_MINUTE, 5],
-                  'M15':[api.PERIOD_TYPE_DAY, 1,  api.FREQUENCY_TYPE_MINUTE, 15],
-                  'M30':[api.PERIOD_TYPE_DAY, 2,  api.FREQUENCY_TYPE_MINUTE, 30],
-                  'H1': [api.PERIOD_TYPE_DAY, 2,  api.FREQUENCY_TYPE_HOUR, 1],
-                  'D1': [api.PERIOD_TYPE_WEEK, 5, api.FREQUENCY_TYPE_DAY, 1] }
+    TIMEFRAMES = {'M1': [api.PERIOD_TYPE_DAY, 3,  api.FREQUENCY_TYPE_MINUTE, 1],
+                  'M5': [api.PERIOD_TYPE_DAY, 10,  api.FREQUENCY_TYPE_MINUTE, 5],
+                  'M15':[api.PERIOD_TYPE_DAY, 20,  api.FREQUENCY_TYPE_MINUTE, 15],
+                  'M30':[api.PERIOD_TYPE_DAY, 30,  api.FREQUENCY_TYPE_MINUTE, 30],
+                  'H1': [api.PERIOD_TYPE_DAY, 50,  api.FREQUENCY_TYPE_HOUR, 1],
+                  'D1': [api.PERIOD_TYPE_WEEK, 100, api.FREQUENCY_TYPE_DAY, 1] }
 
     @staticmethod
     def download(symbol, timeframe, tzinfo):

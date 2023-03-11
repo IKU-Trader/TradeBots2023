@@ -16,8 +16,10 @@ from dash import dcc
 from dash import html
 from dash.dependencies import Input, Output
 
+import plotly
 import plotly.graph_objs as go
-from plotly.tools import FigureFactory as ff
+#from plotly.tools import FigureFactory as ff
+from plotly.figure_factory import create_candlestick
 #import pandas_datareader as web
 from YahooFinanceApi import YahooFinanceApi
 
@@ -26,7 +28,7 @@ from const import const
 
 TICKERS = ['AAPL', 'AMZN', 'META']
 TIMEFRAMES = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'H8', 'D1']
-BARSIZE = ['25', '50', '100', '150', '200', '300', '400']
+BARSIZE = ['50', '100', '150', '200', '300', '400']
 
 def createApp():
     app = dash.Dash(external_stylesheets=[dbc.themes.FLATLY])
@@ -56,7 +58,7 @@ def createApp():
                     html.P('Display Bar Size',
                            style={'margin-top': '16px', 'margin-bottom': '4px'},
                            className='font-weight-bold'),
-                            dcc.Dropdown(id='barsize', multi=False, value=BARSIZE[1], options=[{'label': x, 'value': x} for x in BARSIZE], style={'width': '120px'}
+                            dcc.Dropdown(id='barsize', multi=False, value=BARSIZE[3], options=[{'label': x, 'value': x} for x in BARSIZE], style={'width': '120px'}
                     ),
                     html.Button(id='apply', n_clicks=0, children='apply',
                                 style={'margin-top': '16px'},
@@ -110,29 +112,28 @@ app = createApp()
               [Input(component_id='apply', component_property='n_clicks'),
                Input(component_id='symbol', component_property='value'),
                Input(component_id='timeframe', component_property='value'),
+               Input(component_id='barsize', component_property='value'),
                Input(component_id='output_chart', component_property='children')])
-def update_value(apply, symbol, timeframe, graph):
-    print('res... ', apply, symbol, timeframe)
+def update_value(apply, symbol, timeframe, barsize, graph):
+    print('res... ', apply, symbol, timeframe, barsize)
     if apply == 0 or symbol.strip() == '':
         return (apply, graph)
     start = datetime(2022, 7, 1)  
     end = datetime.now() 
-    #df0 = web.DataReader(symbol, data_source='stooq', start=start,end=end)
-    #df = df0.sort_index()
     df = YahooFinanceApi.download(symbol, timeframe, TimeUtils.TIMEZONE_TOKYO)
-    #print(df.iloc[:5, :])
-    fig = ff.create_candlestick(df[const.OPEN], df[const.HIGH], df[const.LOW], df[const.CLOSE])
-    #tbegin = df.index[0]
-    #tend = df.index[-1]
-    #print(tbegin, tend)
+    n = int(barsize)
+    if len(df) > n:
+        df = df.iloc[-n:, :]
+    print('Data size: ', len(df))
+    #fig = ff.create_candlestick(df[const.OPEN], df[const.HIGH], df[const.LOW], df[const.CLOSE])
+    fig = create_candlestick(df[const.OPEN], df[const.HIGH], df[const.LOW], df[const.CLOSE])
     xtick0 = (5 - df.index[0].weekday()) % 5
-    
     tfrom = df.index[0].strftime('%y-%m-%d')
     tto = df.index[-1].strftime('%y-%m-%d')
     if timeframe == 'D1' or timeframe == 'H1':
         form = '%m-%d'
     else:
-        form = '%H:%M'
+        form = '%d/%H:%M'
     fig['layout'].update({
                             'title': symbol + '　' +  tfrom + ' - ' + tto,
                             'xaxis':{
