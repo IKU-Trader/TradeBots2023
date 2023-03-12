@@ -27,20 +27,28 @@ from TimeUtils import TimeUtils
 from const import const
 
 TICKERS = ['AAPL', 'AMZN', 'META']
-TIMEFRAMES = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'H8', 'D1']
+TIMEFRAMES = list(YahooFinanceApi.TIMEFRAMES.keys())
 BARSIZE = ['50', '100', '150', '200', '300', '400']
+
+
+class Globals:
+    def __init__(self, ticker: str, timeframe: str, barsize: str):
+        self.ticker = ticker 
+        self.timeframe = timeframe
+        self.barsize = barsize
+        
+g = Globals(TICKERS[0], TIMEFRAMES[0], BARSIZE[3])        
 
 def createApp():
     app = dash.Dash(external_stylesheets=[dbc.themes.FLATLY])
-    timeframes = list(YahooFinanceApi.TIMEFRAMES.keys())
     sidebar = html.Div(
     [
         dbc.Row(
             [
                 html.H5('Settings',
-                        style={'margin-top': '12px', 'margin-left': '24px'})
+                        style={'margin-top': '2px', 'margin-left': '24px'})
             ],
-            style={"height": "5vh"}, className='bg-primary text-white'
+            style={"height": "3vh"}, className='bg-primary text-white'
         ),
         dbc.Row(
             [
@@ -48,21 +56,28 @@ def createApp():
                     html.P('Ticker Symbol',
                            style={'margin-top': '8px', 'margin-bottom': '4px'},
                            className='font-weight-bold'),
-                            dcc.Dropdown(id='symbol', multi=False, value=TICKERS[0], options=[{'label': x, 'value': x} for x in TICKERS], style={'width': '220px'}
+                            dcc.Dropdown(id='symbol', multi=False, value=g.ticker, options=[{'label': x, 'value': x} for x in TICKERS], style={'width': '220px'}
                     ),
                     html.P('Time Frame',
                            style={'margin-top': '16px', 'margin-bottom': '4px'},
                            className='font-weight-bold'),
-                            dcc.Dropdown(id='timeframe', multi=False, value=timeframes[0], options=[{'label': x, 'value': x} for x in timeframes], style={'width': '120px'}
+                            dcc.Dropdown(id='timeframe', multi=False, value=g.timeframe, options=[{'label': x, 'value': x} for x in TIMEFRAMES], style={'width': '120px'}
                     ),
                     html.P('Display Bar Size',
                            style={'margin-top': '16px', 'margin-bottom': '4px'},
                            className='font-weight-bold'),
-                            dcc.Dropdown(id='barsize', multi=False, value=BARSIZE[3], options=[{'label': x, 'value': x} for x in BARSIZE], style={'width': '120px'}
+                            dcc.Dropdown(id='barsize', multi=False, value=g.barsize, options=[{'label': x, 'value': x} for x in BARSIZE], style={'width': '120px'}
                     ),
-                    html.Button(id='apply', n_clicks=0, children='apply',
-                                style={'margin-top': '16px'},
-                                className='btn btn-primary'),
+                    html.Div(
+                        html.Button(id='apply', n_clicks=0, children='apply',
+                                    style={'margin-top': '16px'},
+                                    className='btn btn-primary'),
+                    ),
+                    html.Div(
+                        html.Button(id='draw', n_clicks=0, children='draw',
+                                    style={'margin-top': '16px'},
+                                    className='btn btn-primary')
+                    ),
                     html.Hr()
                 ])
             ],
@@ -74,9 +89,9 @@ def createApp():
     [    
         dbc.Row(
             [
-                html.H5('Stock Chart', style={'margin-top': '12px', 'margin-left': '24px'})
+                html.H5('Yahoo Finance', style={'margin-top': '2px', 'margin-left': '24px'})
             ],
-            style={"height": "5vh"}, className='bg-primary text-white'
+            style={"height": "3vh"}, className='bg-primary text-white'
             ),
         dbc.Row(
             [
@@ -107,35 +122,42 @@ def createApp():
     return app
 
 app = createApp()
-@app.callback([Output(component_id='apply', component_property='n_clicks'),
-               Output(component_id='output_chart', component_property='children')],
-              [Input(component_id='apply', component_property='n_clicks'),
-               Input(component_id='symbol', component_property='value'),
+
+@app.callback(Output(component_id='symbol', component_property='value'),
+               [Input(component_id='symbol', component_property='value'),
                Input(component_id='timeframe', component_property='value'),
-               Input(component_id='barsize', component_property='value'),
+               Input(component_id='barsize', component_property='value')])
+def update_property(symbol, timeframe, barsize):
+    print('*1', symbol, timeframe, barsize)
+    g.ticker = symbol
+    g.timeframe = timeframe
+    g.barsize = barsize
+    return symbol
+             
+@app.callback([Output(component_id='draw', component_property='n_clicks'),
+               Output(component_id='output_chart', component_property='children')],
+              [Input(component_id='draw', component_property='n_clicks'),
                Input(component_id='output_chart', component_property='children')])
-def update_value(apply, symbol, timeframe, barsize, graph):
-    print('res... ', apply, symbol, timeframe, barsize)
-    if apply == 0 or symbol.strip() == '':
-        return (apply, graph)
-    start = datetime(2022, 7, 1)  
-    end = datetime.now() 
-    df = YahooFinanceApi.download(symbol, timeframe, TimeUtils.TIMEZONE_TOKYO)
-    n = int(barsize)
+def update_value(n_clicks, graph):
+    print('*2', n_clicks)
+    if n_clicks == 0:
+        return (n_clicks, graph)
+    df = YahooFinanceApi.download(g.ticker, g.timeframe, TimeUtils.TIMEZONE_TOKYO)
+    n = int(g.barsize)
     if len(df) > n:
         df = df.iloc[-n:, :]
     print('Data size: ', len(df))
     #fig = ff.create_candlestick(df[const.OPEN], df[const.HIGH], df[const.LOW], df[const.CLOSE])
     fig = create_candlestick(df[const.OPEN], df[const.HIGH], df[const.LOW], df[const.CLOSE])
     xtick0 = (5 - df.index[0].weekday()) % 5
-    tfrom = df.index[0].strftime('%y-%m-%d')
-    tto = df.index[-1].strftime('%y-%m-%d')
-    if timeframe == 'D1' or timeframe == 'H1':
+    tfrom = df.index[0].strftime('%Y-%m-%d')
+    tto = df.index[-1].strftime('%Y-%m-%d')
+    if g.timeframe == 'D1' or g.timeframe == 'H1':
         form = '%m-%d'
     else:
         form = '%d/%H:%M'
     fig['layout'].update({
-                            'title': symbol + '　' +  tfrom + ' - ' + tto,
+                            'title': g.ticker + '　' +  tfrom + ' - ' + tto,
                             'xaxis':{
                                         'title': '日付',
                                         'showgrid': True,
