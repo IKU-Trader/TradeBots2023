@@ -8,12 +8,12 @@ Created on Fri Mar 10 10:23:54 2023
 import sys 
 sys.path.append('../libs')
 import numpy as np
+import pandas as pd
 from datetime import datetime
 
 import dash
 import dash_bootstrap_components as dbc
-from dash import dcc
-from dash import html
+from dash import dcc, html, dash_table
 from dash.dependencies import Input, Output
 
 import plotly
@@ -36,6 +36,7 @@ class Globals:
         self.ticker = ticker 
         self.timeframe = timeframe
         self.barsize = barsize
+        self.df = pd.DataFrame()
         
 g = Globals(TICKERS[0], TIMEFRAMES[0], BARSIZE[3])        
 
@@ -69,12 +70,12 @@ def createApp():
                             dcc.Dropdown(id='barsize', multi=False, value=g.barsize, options=[{'label': x, 'value': x} for x in BARSIZE], style={'width': '120px'}
                     ),
                     html.Div(
-                        html.Button(id='apply', n_clicks=0, children='apply',
+                        html.Button(id='draw_button', n_clicks=0, children='drarw',
                                     style={'margin-top': '16px'},
                                     className='btn btn-primary'),
                     ),
                     html.Div(
-                        html.Button(id='draw', n_clicks=0, children='draw',
+                        html.Button(id='set_button', n_clicks=0, children='table',
                                     style={'margin-top': '16px'},
                                     className='btn btn-primary')
                     ),
@@ -97,13 +98,13 @@ def createApp():
             [
                 html.Div(id='output_chart'),
             ],
-            style={"height": "60vh"}, className='bg-white'
+            style={"height": "40vh"}, className='bg-white'
         ),
         dbc.Row(
             [
-                html.P('Positions')
+                html.Div(id='table_container')
             ],
-            style={"height": "20vh"}, className='bg-primary text-white'
+            #style={"height": "20vh"}, className='bg-primary text-white'
             )
         ]
     )
@@ -128,18 +129,18 @@ app = createApp()
                Input(component_id='timeframe', component_property='value'),
                Input(component_id='barsize', component_property='value')])
 def update_property(symbol, timeframe, barsize):
-    print('*1', symbol, timeframe, barsize)
+    #print('*1', symbol, timeframe, barsize)
     g.ticker = symbol
     g.timeframe = timeframe
     g.barsize = barsize
     return symbol
              
-@app.callback([Output(component_id='draw', component_property='n_clicks'),
+@app.callback([Output(component_id='draw_button', component_property='n_clicks'),
                Output(component_id='output_chart', component_property='children')],
-              [Input(component_id='draw', component_property='n_clicks'),
+              [Input(component_id='draw_button', component_property='n_clicks'),
                Input(component_id='output_chart', component_property='children')])
-def update_value(n_clicks, graph):
-    print('*2', n_clicks)
+def update_graph(n_clicks, graph):
+    #print('*2', n_clicks)
     if n_clicks == 0:
         return (n_clicks, graph)
     df = YahooFinanceApi.download(g.ticker, g.timeframe, TimeUtils.TIMEZONE_TOKYO)
@@ -171,16 +172,59 @@ def update_value(n_clicks, graph):
     return (0, dcc.Graph(id='stock-graph', figure=fig))
 
 '''
-def update_value2(symbol): 
-    if symbol.strip() == '':
-        return None
-    start = datetime(2022, 10, 1)  
-    end = datetime.now() 
-    df = web.DataReader(symbol, data_source='stooq', start=start,end=end)
-    candlestick = go.Candlestick(x=df.index, open=df['Open'], high=df['High'], low=df['Low'], close=df['Close'], name=symbol)    
-    layout = go.Layout(title=symbol + ' 株価チャート', xaxis={'title':'日付'}, yaxis={'title':'価格'})
-    return dcc.Graph(id='stock-graph', figure={'data': [candlestick], 'layout': layout})
+@app.callback([Output(component_id='set_button', component_property='n_clicks'),
+              Output(component_id='table_container', component_property='children')],
+              [Input(component_id='set_button', component_property='n_clicks'),
+              Input(component_id='table_container', component_property='children')])
+def update_table(n_clicks, table):
+    print(n_clicks, table)
+    if n_clicks == 0:
+        return (n_clicks, table)
+    g.df = pd.read_csv('https://git.io/Juf1t')
+    #print(g.df)
+    output_table = dash_table.DataTable(
+        id='table',
+        columns=[{"name": i, "id": i} for i in g.df.columns],
+        data=g.df.to_dict('records'),
+        page_size = 10
+    )
+    return (0, output_table)
 '''
+  
+@app.callback([Output(component_id='set_button', component_property='n_clicks'),
+              Output(component_id='table_container', component_property='children')],
+              [Input(component_id='set_button', component_property='n_clicks'),
+              Input(component_id='table_container', component_property='children')])
+def update_table(n_clicks, fig):
+    headerColor = 'grey'
+    rowEvenColor = 'lightgrey'
+    rowOddColor = 'white'
+    print(n_clicks, fig)
+    if n_clicks == 0:
+        return (n_clicks, fig)
+    g.df = pd.read_csv('https://git.io/Juf1t')
+    out_fig = go.Figure(
+            data=[
+                    go.Table(
+                    header=dict(
+                        values=g.df.columns,
+                        line_color='darkslategray',
+                        fill_color=headerColor,
+                        align=['center'],
+                        font=dict(color='white', size=11),
+                        height=20
+                    ),
+                    cells=dict(
+                        values=g.df.values.T,
+                        line_color='darkslategray',
+                        fill_color = [[rowOddColor,rowEvenColor,rowOddColor, rowEvenColor,rowOddColor]*5],
+                        align=['center'],
+                        font = dict(color = 'darkslategray', size = 10)
+                    )
+              )
+            ]
+          )           
+    return (0, dcc.Graph(id='position_table', figure=out_fig))
 
 if __name__ == "__main__":
     app.run_server(debug=True, port=1234)
