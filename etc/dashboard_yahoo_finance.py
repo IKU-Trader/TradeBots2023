@@ -30,6 +30,7 @@ TICKERS = ['AAPL', 'AMZN', 'META']
 TIMEFRAMES = list(YahooFinanceApi.TIMEFRAMES.keys())
 BARSIZE = ['50', '100', '150', '200', '300', '400']
 
+INTERVAL_MSEC = 5000
 
 class Globals:
     def __init__(self, ticker: str, timeframe: str, barsize: str):
@@ -105,8 +106,13 @@ def createApp():
                 html.Div(id='table_container')
             ],
             #style={"height": "20vh"}, className='bg-primary text-white'
-            )
-        ]
+            ),
+        dcc.Interval(
+            id='timer_interval',
+            interval=INTERVAL_MSEC, # in milliseconds
+            n_intervals=0
+        )]
+        
     )
 
     app.layout = dbc.Container(
@@ -135,6 +141,40 @@ def update_property(symbol, timeframe, barsize):
     g.barsize = barsize
     return symbol
              
+@app.callback(Output(component_id='output_chart', component_property='children'),
+              Input(component_id='timer_interval', component_property='n_intervals'))
+def update_graph(n_intervals):
+    print('*timer', n_intervals)
+    df = YahooFinanceApi.download(g.ticker, g.timeframe, TimeUtils.TIMEZONE_TOKYO)
+    n = int(g.barsize)
+    if len(df) > n:
+        df = df.iloc[-n:, :]
+    print('Data size: ', len(df))
+    #fig = ff.create_candlestick(df[const.OPEN], df[const.HIGH], df[const.LOW], df[const.CLOSE])
+    fig = create_candlestick(df[const.OPEN], df[const.HIGH], df[const.LOW], df[const.CLOSE])
+    xtick0 = (5 - df.index[0].weekday()) % 5
+    tfrom = df.index[0].strftime('%Y-%m-%d %H:%M')
+    tto = df.index[-1].strftime('%Y-%m-%d %H:%M')
+    if g.timeframe == 'D1' or g.timeframe == 'H1':
+        form = '%m-%d'
+    else:
+        form = '%d/%H:%M'
+    fig['layout'].update({
+                            'title': g.ticker + '　' +  tfrom + '  ->  ' + tto,
+                            'xaxis':{
+                                        'title': '日付',
+                                        'showgrid': True,
+                                        'ticktext': [x.strftime(form) for x in df.index][xtick0::5],
+                                        'tickvals': np.arange(xtick0, len(df), 5)
+                                    },
+                            'yaxis':{
+                                        'title': '価格'
+                                }
+       })
+    #print(fig)
+    return dcc.Graph(id='stock-graph', figure=fig)
+
+'''
 @app.callback([Output(component_id='draw_button', component_property='n_clicks'),
                Output(component_id='output_chart', component_property='children')],
               [Input(component_id='draw_button', component_property='n_clicks'),
@@ -151,14 +191,14 @@ def update_graph(n_clicks, graph):
     #fig = ff.create_candlestick(df[const.OPEN], df[const.HIGH], df[const.LOW], df[const.CLOSE])
     fig = create_candlestick(df[const.OPEN], df[const.HIGH], df[const.LOW], df[const.CLOSE])
     xtick0 = (5 - df.index[0].weekday()) % 5
-    tfrom = df.index[0].strftime('%Y-%m-%d')
-    tto = df.index[-1].strftime('%Y-%m-%d')
+    tfrom = df.index[0].strftime('%Y-%m-%d %H:%M')
+    tto = df.index[-1].strftime('%Y-%m-%d %H:%M')
     if g.timeframe == 'D1' or g.timeframe == 'H1':
         form = '%m-%d'
     else:
         form = '%d/%H:%M'
     fig['layout'].update({
-                            'title': g.ticker + '　' +  tfrom + ' - ' + tto,
+                            'title': g.ticker + '　' +  tfrom + '  ->  ' + tto,
                             'xaxis':{
                                         'title': '日付',
                                         'showgrid': True,
@@ -170,25 +210,6 @@ def update_graph(n_clicks, graph):
                                 }
        })
     return (0, dcc.Graph(id='stock-graph', figure=fig))
-
-'''
-@app.callback([Output(component_id='set_button', component_property='n_clicks'),
-              Output(component_id='table_container', component_property='children')],
-              [Input(component_id='set_button', component_property='n_clicks'),
-              Input(component_id='table_container', component_property='children')])
-def update_table(n_clicks, table):
-    print(n_clicks, table)
-    if n_clicks == 0:
-        return (n_clicks, table)
-    g.df = pd.read_csv('https://git.io/Juf1t')
-    #print(g.df)
-    output_table = dash_table.DataTable(
-        id='table',
-        columns=[{"name": i, "id": i} for i in g.df.columns],
-        data=g.df.to_dict('records'),
-        page_size = 10
-    )
-    return (0, output_table)
 '''
   
 @app.callback([Output(component_id='set_button', component_property='n_clicks'),
