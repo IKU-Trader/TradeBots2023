@@ -22,6 +22,7 @@ from PyMT5 import PyMT5
 from TimeUtils import TimeUtils
 from const import const
 
+INTERVAL_MSEC = 1000
 TICKERS = ['DOWUSD', 'NASUSD', 'JPXJPY', 'XAUUSD', 'WTIUSD', 'USDJPY','EURJPY', 'GBPJPY', 'AUDJPY']
 TIMEFRAMES = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1']
 
@@ -33,7 +34,7 @@ symbol_dropdown = html.Div([
     dcc.Dropdown(
         id='symbol-dropdown',
         options=[{'label': symbol, 'value': symbol} for symbol in TICKERS],
-        value='EURUSD'
+        value='DOWUSD'
     )
 ])
 
@@ -42,7 +43,7 @@ timeframe_dropdown = html.Div([
     dcc.Dropdown(
         id='timeframe-dropdown',
         options=[{'label': timeframe, 'value': timeframe} for timeframe in TIMEFRAMES],
-        value='D1'
+        value='M1'
     )
 ])
 
@@ -60,7 +61,7 @@ app.layout = html.Div([
         dbc.Col(num_bars_input)
     ]),
     html.Hr(),
-    dcc.Interval(id='update', interval=200),
+    dcc.Interval(id='update', interval=INTERVAL_MSEC),
     html.Div(id='chart_output')
 
 ], style={'margin-left': '5%', 'margin-right': '5%', 'margin-top': '20px'})
@@ -73,14 +74,14 @@ app.layout = html.Div([
 )
 def update_ohlc_chart(interval, symbol, timeframe, num_bars):
     num_bars = int(num_bars)
-    print(symbol, timeframe, num_bars)
+    #print(symbol, timeframe, num_bars)
     dic = server.download(symbol, timeframe, num_bars)
     return createChart(symbol, timeframe, dic)
   
 def createChart(symbol, timeframe, dic):
     fig = create_candlestick(dic[const.OPEN], dic[const.HIGH], dic[const.LOW], dic[const.CLOSE])
     time = dic[const.TIME]
-    print('Data ', len(time))
+    #print(symbol, timeframe, dic)
     xtick0 = (5 - time[0].weekday()) % 5
     tfrom = time[0].strftime('%Y-%m-%d %H:%M')
     tto = time[-1].strftime('%Y-%m-%d %H:%M')

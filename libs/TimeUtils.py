@@ -41,7 +41,13 @@ class TimeUtils:
         l = range(n - 6, n + 1)
         w = calendar.weekday(year, month, l[0])
         w_l = [i % 7 for i in range(w, w + 7)]
-        return l[w_l.index(dow)]  
+        return l[w_l.index(dow)]
+    
+    @staticmethod 
+    def dayOfSunday(year, month, num):
+        first = datetime(year, month, 1).weekday()
+        day = 7 * num - first
+        return day
     
     @staticmethod
     def utcTime(year, month, day, hour, minute, second):
@@ -62,6 +68,17 @@ class TimeUtils:
 
     @staticmethod
     def isSummerTime(date_time):
+        day0 = TimeUtils.dayOfSunday(date_time.year, 3, 2)
+        tsummer0 = TimeUtils.utcTime(date_time.year, 3, day0, 0, 0, 0)
+        day1 = TimeUtils.dayOfSunday(date_time.year, 10, 2)
+        tsummer1 = TimeUtils.utcTime(date_time.year, 10, day1, 0, 0, 0)
+        if date_time > tsummer0 and date_time < tsummer1:
+            return True
+        else:
+            return False
+    
+    @staticmethod
+    def isSummerTime2(date_time):
         day0 = TimeUtils.dayOfLastSunday(date_time.year, 3)
         tsummer0 = TimeUtils.utcTime(date_time.year, 3, day0, 0, 0, 0)
         day1 = TimeUtils.dayOfLastSunday(date_time.year, 10)
@@ -81,7 +98,7 @@ class TimeUtils:
             return t
             
         if TimeUtils.isSummerTime(t):
-            dt = 1
+            dt = 3
         else:
             dt = 2
         t -= timedelta(hours=dt)
