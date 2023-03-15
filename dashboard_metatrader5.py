@@ -22,57 +22,99 @@ from PyMT5 import PyMT5
 from TimeUtils import TimeUtils
 from const import const
 
-INTERVAL_MSEC = 1000
+INTERVAL_MSEC = 200
 TICKERS = ['DOWUSD', 'NASUSD', 'JPXJPY', 'XAUUSD', 'WTIUSD', 'USDJPY','EURJPY', 'GBPJPY', 'AUDJPY']
 TIMEFRAMES = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1']
+BARSIZE = ['50', '100', '150', '200', '300', '400', '500']
 
 server = PyMT5(TimeUtils.TIMEZONE_TOKYO)
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
 
-symbol_dropdown = html.Div([
-    html.P('Symbol:'),
-    dcc.Dropdown(
-        id='symbol-dropdown',
-        options=[{'label': symbol, 'value': symbol} for symbol in TICKERS],
-        value='DOWUSD'
-    )
-])
+# ----
+setting_bar = dbc.Row([
+                        html.H5('Settings',
+                        style={'margin-top': '2px', 'margin-left': '24px'})
+                        ],
+                        style={"height": "3vh"},
+                        className='bg-primary text-white')
 
-timeframe_dropdown = html.Div([
-    html.P('Timeframe:'),
-    dcc.Dropdown(
-        id='timeframe-dropdown',
-        options=[{'label': timeframe, 'value': timeframe} for timeframe in TIMEFRAMES],
-        value='M1'
-    )
-])
+ticker_dropdown = dcc.Dropdown(id='symbol_dropdown',
+                             multi=False,
+                             value=TICKERS[0],
+                             options=[{'label': x, 'value': x} for x in TICKERS],
+                             style={'width': '140px'})
 
-num_bars_input = html.Div([
-    html.P('Number of Candles'),
-    dbc.Input(id='num-bar-input', type='number', value='100')
-])
+ticker = html.Div([ html.P('Ticker Symbol',
+                           style={'margin-top': '8px', 'margin-bottom': '4px'}, 
+                           className='font-weight-bold'),
+                   ticker_dropdown])
+ 
+timeframe_dropdown = dcc.Dropdown(id='timeframe_dropdown', 
+                                  multi=False, 
+                                  value=TIMEFRAMES[1], 
+                                  options=[{'label': x, 'value': x} for x in TIMEFRAMES],
+                                  style={'width': '120px'})                
+timeframe =  html.Div([
+                                html.P('Time Frame',
+                                       style={'margin-top': '16px', 'margin-bottom': '4px'},
+                                       className='font-weight-bold'),
+                                timeframe_dropdown])
 
-# creates the layout of the App
-app.layout = html.Div([
-    html.H1('Real Time Charts'),
-    dbc.Row([
-        dbc.Col(symbol_dropdown),
-        dbc.Col(timeframe_dropdown),
-        dbc.Col(num_bars_input)
-    ]),
-    html.Hr(),
-    dcc.Interval(id='update', interval=INTERVAL_MSEC),
-    html.Div(id='chart_output')
+barsize_dropdown = dcc.Dropdown(id='barsize_dropdown', 
+                                multi=False, 
+                                value=BARSIZE[2],
+                                options=[{'label': x, 'value': x} for x in BARSIZE],
+                                style={'width': '120px'})
 
-], style={'margin-left': '5%', 'margin-right': '5%', 'margin-top': '20px'})
+barsize = html.Div([    html.P('Display Bar Size',
+                               style={'margin-top': '16px', 'margin-bottom': '4px'},
+                               className='font-weight-bold'),
+                        barsize_dropdown])
 
+sidebar =  html.Div([
+                        setting_bar,
+                        html.Div([ticker,
+                                 timeframe,
+                                 barsize,
+                                 html.Hr()],
+                        style={'height': '50vh', 'margin': '8px'})
+                    ])
+    
+contents = html.Div([    
+                        dbc.Row([
+                                    html.H5('MetaTrader5', style={'margin-top': '2px', 'margin-left': '24px'})
+                                ],
+                                style={"height": "3vh"}, className='bg-primary text-white'),
+                        dbc.Row([
+                                    html.Div(id='chart_output'),
+                                ],
+                                style={"height": "40vh"}, className='bg-white'),
+                        dbc.Row([
+                                    html.Div(id='table_container')
+                                ],
+                                #style={"height": "20vh"}, className='bg-primary text-white'
+                                ),
+                        dcc.Interval(
+                                        id='timer',
+                                        interval=INTERVAL_MSEC,
+                                        n_intervals=0)
+                    ])
 
+app.layout = dbc.Container([
+                            dbc.Row(
+                                    [
+                                        dbc.Col(sidebar, width=2, className='bg-light'),
+                                        dbc.Col(contents, width=9)
+                                    ],
+                                    style={"height": "100vh"}),
+                            ],
+                            fluid=True)
 @app.callback(
     Output('chart_output', 'children'),
-    Input('update', 'n_intervals'),
-    State('symbol-dropdown', 'value'), State('timeframe-dropdown', 'value'), State('num-bar-input', 'value')
+    Input('timer', 'n_intervals'),
+    State('symbol_dropdown', 'value'), State('timeframe_dropdown', 'value'), State('barsize_dropdown', 'value')
 )
-def update_ohlc_chart(interval, symbol, timeframe, num_bars):
+def updateChart(interval, symbol, timeframe, num_bars):
     num_bars = int(num_bars)
     #print(symbol, timeframe, num_bars)
     dic = server.download(symbol, timeframe, num_bars)
@@ -99,22 +141,10 @@ def createChart(symbol, timeframe, dic):
                                     },
                             'yaxis':{
                                         'title': '価格'
-                                }
+                                    }
        })
     #print(fig)
     return dcc.Graph(id='stock-graph', figure=fig)
-      
-def createChart2(dic):
-    fig = go.Figure(data=go.Candlestick(x=dic[const.TIME],
-                    open=dic[const.OPEN],
-                    high=dic[const.HIGH],
-                    low=dic[const.LOW],
-                    close=dic[const.CLOSE]))
-    fig.update(layout_xaxis_rangeslider_visible=False)
-    fig.update_layout(yaxis={'side': 'right'})
-    fig.layout.xaxis.fixedrange = True
-    fig.layout.yaxis.fixedrange = True
-    return dcc.Graph(figure=fig, config={'displayModeBar': False})
 
 if __name__ == '__main__':
     app.run_server(debug=True, port=3333)
