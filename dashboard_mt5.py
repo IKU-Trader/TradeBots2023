@@ -6,7 +6,8 @@ Created on Fri Mar 10 10:23:54 2023
 """
 
 import sys 
-sys.path.append('../libs')
+sys.path.append('./libs')
+sys.path.append('./libs/PyMT5')
 import numpy as np
 import pandas as pd
 from datetime import datetime
@@ -18,19 +19,19 @@ from dash.dependencies import Input, Output
 
 import plotly
 import plotly.graph_objs as go
-#from plotly.tools import FigureFactory as ff
 from plotly.figure_factory import create_candlestick
-#import pandas_datareader as web
-from YahooFinanceApi import YahooFinanceApi
 
+import MetaTrader5 as mt5
+
+from PyMT5 import PyMT5
 from TimeUtils import TimeUtils
 from const import const
 
-TICKERS = ['AAPL', 'AMZN', 'META']
-TIMEFRAMES = list(YahooFinanceApi.TIMEFRAMES.keys())
+TICKERS = ['DOWUSD', 'NASUSD', 'JPXJPY', 'XAUUSD', 'WTIUSD', 'USDJPY','EURJPY', 'GBPJPY', 'AUDJPY']
+TIMEFRAMES = ['M1', 'M5', 'M15', 'M30', 'H1', 'H4', 'D1']
 BARSIZE = ['50', '100', '150', '200', '300', '400']
 
-INTERVAL_MSEC = 5000
+INTERVAL_MSEC = 10000
 
 class Globals:
     def __init__(self, ticker: str, timeframe: str, barsize: str):
@@ -38,6 +39,7 @@ class Globals:
         self.timeframe = timeframe
         self.barsize = barsize
         self.df = pd.DataFrame()
+        #self.api = PyMT5(TimeUtils.TIMEZONE_TOKYO)
         
 g = Globals(TICKERS[0], TIMEFRAMES[0], BARSIZE[3])        
 
@@ -128,6 +130,7 @@ def createApp():
     fluid=True)
     return app
 
+
 app = createApp()
 
 @app.callback(Output(component_id='symbol', component_property='value'),
@@ -135,7 +138,7 @@ app = createApp()
                Input(component_id='timeframe', component_property='value'),
                Input(component_id='barsize', component_property='value')])
 def update_property(symbol, timeframe, barsize):
-    #print('*1', symbol, timeframe, barsize)
+    print('*1', symbol, timeframe, barsize)
     g.ticker = symbol
     g.timeframe = timeframe
     g.barsize = barsize
@@ -144,17 +147,20 @@ def update_property(symbol, timeframe, barsize):
 @app.callback(Output(component_id='output_chart', component_property='children'),
               Input(component_id='timer_interval', component_property='n_intervals'))
 def update_graph(n_intervals):
-    print('*timer', n_intervals)
-    df = YahooFinanceApi.download(g.ticker, g.timeframe, TimeUtils.TIMEZONE_TOKYO)
-    n = int(g.barsize)
-    if len(df) > n:
-        df = df.iloc[-n:, :]
-    print('Data size: ', len(df))
-    #fig = ff.create_candlestick(df[const.OPEN], df[const.HIGH], df[const.LOW], df[const.CLOSE])
-    fig = create_candlestick(df[const.OPEN], df[const.HIGH], df[const.LOW], df[const.CLOSE])
-    xtick0 = (5 - df.index[0].weekday()) % 5
-    tfrom = df.index[0].strftime('%Y-%m-%d %H:%M')
-    tto = df.index[-1].strftime('%Y-%m-%d %H:%M')
+    print('*timer', n_intervals, g.ticker, g.timeframe, g.barsize)
+    if len(g.ticker) == 0:
+        return None
+    print('*??')
+    #dic = g.api.download(g.symbol, g.timeframe, int(g.barsize))
+    d = mt5.copy_rates_from_pos(g.symbol, g.timeframe , 0, int(g.barsize)) 
+    print(d)
+    dic = {}
+    fig = create_candlestick(dic[const.OPEN], dic[const.HIGH], dic[const.LOW], dic[const.CLOSE])
+    time = dic[const.TIME]
+    print('Data ', len(time))
+    xtick0 = (5 - time[0].weekday()) % 5
+    tfrom = time[0].strftime('%Y-%m-%d %H:%M')
+    tto = time[-1].strftime('%Y-%m-%d %H:%M')
     if g.timeframe == 'D1' or g.timeframe == 'H1':
         form = '%m-%d'
     else:
@@ -164,8 +170,8 @@ def update_graph(n_intervals):
                             'xaxis':{
                                         'title': '日付',
                                         'showgrid': True,
-                                        'ticktext': [x.strftime(form) for x in df.index][xtick0::5],
-                                        'tickvals': np.arange(xtick0, len(df), 5)
+                                        'ticktext': [x.strftime(form) for x in time][xtick0::5],
+                                        'tickvals': np.arange(xtick0, len(time), 5)
                                     },
                             'yaxis':{
                                         'title': '価格'
@@ -173,44 +179,6 @@ def update_graph(n_intervals):
        })
     #print(fig)
     return dcc.Graph(id='stock-graph', figure=fig)
-
-'''
-@app.callback([Output(component_id='draw_button', component_property='n_clicks'),
-               Output(component_id='output_chart', component_property='children')],
-              [Input(component_id='draw_button', component_property='n_clicks'),
-               Input(component_id='output_chart', component_property='children')])
-def update_graph(n_clicks, graph):
-    #print('*2', n_clicks)
-    if n_clicks == 0:
-        return (n_clicks, graph)
-    df = YahooFinanceApi.download(g.ticker, g.timeframe, TimeUtils.TIMEZONE_TOKYO)
-    n = int(g.barsize)
-    if len(df) > n:
-        df = df.iloc[-n:, :]
-    print('Data size: ', len(df))
-    #fig = ff.create_candlestick(df[const.OPEN], df[const.HIGH], df[const.LOW], df[const.CLOSE])
-    fig = create_candlestick(df[const.OPEN], df[const.HIGH], df[const.LOW], df[const.CLOSE])
-    xtick0 = (5 - df.index[0].weekday()) % 5
-    tfrom = df.index[0].strftime('%Y-%m-%d %H:%M')
-    tto = df.index[-1].strftime('%Y-%m-%d %H:%M')
-    if g.timeframe == 'D1' or g.timeframe == 'H1':
-        form = '%m-%d'
-    else:
-        form = '%d/%H:%M'
-    fig['layout'].update({
-                            'title': g.ticker + '　' +  tfrom + '  ->  ' + tto,
-                            'xaxis':{
-                                        'title': '日付',
-                                        'showgrid': True,
-                                        'ticktext': [x.strftime(form) for x in df.index][xtick0::5],
-                                        'tickvals': np.arange(xtick0, len(df), 5)
-                                    },
-                            'yaxis':{
-                                        'title': '価格'
-                                }
-       })
-    return (0, dcc.Graph(id='stock-graph', figure=fig))
-'''
   
 @app.callback([Output(component_id='set_button', component_property='n_clicks'),
               Output(component_id='table_container', component_property='children')],
@@ -248,4 +216,5 @@ def update_table(n_clicks, fig):
     return (0, dcc.Graph(id='position_table', figure=out_fig))
 
 if __name__ == "__main__":
+    mt5.initialize()
     app.run_server(debug=True, port=1234)

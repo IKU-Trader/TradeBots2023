@@ -6,7 +6,9 @@ Created on Tue Nov 29 11:21:36 2022
 """
 
 import sys
+sys.path.append('./')
 sys.path.append('../')
+import pandas as pd
 
 import MetaTrader5 as mt5
 from mt5_const import mt5_const
@@ -283,21 +285,14 @@ class PyMT5:
         return self.convert(d)
     
     def accountInfo(self):
-        dic = {}
         info = mt5.account_info()
         if info is None:
             print("Retreiving account information failed")
-            return dic
-        dic['balance'] = info.balance
-        dic['credit'] = info.credit
-        dic['profit'] = info.profit
-        dic['equity'] = info.equity
-        dic['margin'] = info.margin
-        dic['margin_free'] = info.margin_free
-        dic['margin_level'] = info.margin_level
-        dic['margin_so_call'] = info.margin_so_call
-        dic['currency'] = info.currency                
-        return dic
+            return None
+        
+        data = [info.balance, info.credit, info.profit, info.equity, info.margin, info.margin_free, info.margin_level, info.margin_so_call, info.currency]
+        columns = ['balance', 'credit', 'profit', 'equity', 'margin', 'margin_free', 'margin_level', 'margin_so_call', 'currency']         
+        return pd.DataFrame(data=[data], columns=columns)
 
     def checkSymbol(self, symbol: str):
         info = mt5.symbol_info(symbol)
@@ -381,8 +376,9 @@ class PyMT5:
 
 def test():
     server = PyMT5(TimeUtils.TIMEZONE_TOKYO)
-    dic = server.download('DOWUSD', 'M5', 5)
-    print(dic)
+    dic = server.download('DOWUSD', 'M1', 5)
+    info = server.accountInfo()
+    print(info)
     
 if __name__ == '__main__':
     test()

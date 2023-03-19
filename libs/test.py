@@ -4,6 +4,10 @@ Created on Tue Feb 28 14:42:24 2023
 
 @author: IKU-Trader
 """
+import sys
+sys.path.append('../libs')
+sys.path.append('../libs/PyMT5')
+
 import os
 import pandas as pd
 import numpy as np
@@ -18,6 +22,8 @@ from DataServerStub import DataServerStub
 from DataBuffer import DataBuffer
 
 from TA.STA import TechnicalAnalysis as ta
+
+from PyMT5 import PyMT5
 
 
 def createIndicator():
@@ -100,6 +106,12 @@ def test():
         t2, d2 = buffer.temporary()
         saveDic(f'../debug/d2_{i}.csv', d2)
         
+def test2():
+    server = PyMT5(TimeUtils.TIMEZONE_TOKYO)
+    dic = server.download('DOWUSD', 'M1', 5)
+    info = server.accountInfo()
+    print(info)
     
 if __name__ == '__main__':
-    test()    
+    test2()  
+ 
