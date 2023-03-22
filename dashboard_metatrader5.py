@@ -98,7 +98,7 @@ close_order = html.Div([ html.P('Close Order',
                                 className='font-weight-bold'),
                                 html.Div([
                                      dcc.Input(id="order_ticket", type="number", placeholder="ticket",
-                                           min=1220000, max=10000000, step=1,
+                                           min=1000000, max=9999999, step=1,
                                            style={'margin-top': '8px', 'margin-right': '4px'}
                                            ), 
                                      dcc.Input(id="close_lot", type="number", placeholder="lot",
@@ -139,14 +139,14 @@ contents = html.Div([
                                            className='font-weight-bold'),
                                     html.Div([],
                                              id='account_info',
-                                             style={'height': '5vh', 'width': '120vh', 'margin': '2px'}),
+                                             style={'height': '5vh', 'width': '130vh', 'margin-left': '20px'}),
                                     html.Div(id='account_table'),
                                     html.P('Position',
-                                           style={'margin-top': '100px', 'margin-bottom': '2px'}, 
+                                           style={'margin-top': '50px', 'margin-bottom': '2px'}, 
                                            className='font-weight-bold'),
                                     html.Div([],
                                              id='position_info',
-                                             style={'height': '5vh', 'width': '120vh', 'margin': '2px'}),
+                                             style={'height': '5vh', 'width': '130vh', 'margin-left': '20px'}),
                                     html.Div(id='position_table')                                    
                                     
                                 ]),
@@ -167,7 +167,10 @@ app.layout = dbc.Container([
                             fluid=True)
 
 @app.callback(
-    Output('market_order_response', 'children'),
+    [Output('market_order_response', 'children'),
+     Output('buy_market_order_button', 'n_clicks'),
+     Output('sell_market_order_button', 'n_clicks'),
+    ],
     Input('buy_market_order_button', 'n_clicks'),
     Input('sell_market_order_button', 'n_clicks'),
     State('market_order_lot', 'value'), 
@@ -176,7 +179,7 @@ app.layout = dbc.Container([
 def update_market_order(buy_n_clicks, sell_n_clicks, lot, symbol):
     print(buy_n_clicks, sell_n_clicks, lot, symbol)
     if buy_n_clicks == 0 and sell_n_clicks == 0:
-        return ''
+        return ('', 0, 0)
     lot = float(lot)
     if buy_n_clicks > 0:    
         ret, dic = server.buyMarketOrder(symbol, lot)
@@ -185,9 +188,9 @@ def update_market_order(buy_n_clicks, sell_n_clicks, lot, symbol):
         ret, dic = server.sellMarketOrder(symbol, lot)
         
     if ret:
-        return 'Success'
+        return ('Success', 0, 0)
     else:
-        return 'Fail'
+        return ('Fail retcode: ' + str(dic['retcode']), 0, 0)
     
 
 @app.callback(
@@ -198,7 +201,7 @@ def update_market_order(buy_n_clicks, sell_n_clicks, lot, symbol):
     State('order_ticket', 'value'), 
 )
 def update_close_order(n_clicks, symbol, lot, ticket):
-    print(n_clicks, symbol, ticket, lot)
+    #print(n_clicks, symbol, ticket, lot)
     if n_clicks == 0:
         return ''
     lot = float(lot)
@@ -206,14 +209,14 @@ def update_close_order(n_clicks, symbol, lot, ticket):
     dic = server.position(ticket)
     if dic is None:
         return 'Fail No position of ticket'
-    print(dic)
+    #print(dic)
     
     pos_time = TimeUtils.timestamp2localtime(dic['time'], tzinfo=TimeUtils.TIMEZONE_TOKYO)
     pos_symbol = dic['symbol']
     pos_type = dic['type']
     pos_volume = float(dic['volume'])
     pos_profit = dic['profit']
-    pos_current_price = dic['current_price']
+    pos_current_price = dic['price_current']
     
     if symbol != pos_symbol:
         return 'Fail No Ticker symbol of the ticket'
@@ -221,7 +224,7 @@ def update_close_order(n_clicks, symbol, lot, ticket):
     if pos_volume < lot:
         return 'Fail volume is ' + str(pos_volume)
     
-    print('lot', lot, pos_volume)
+    #print('lot', lot, pos_volume)
     
     if pos_type == TYPE_BUY:
         ret, dic = server.closeBuyPositionMarketOrder(symbol, lot, ticket)
@@ -265,6 +268,8 @@ def createChart(symbol, timeframe, dic):
         form = '%d/%H:%M'
     fig['layout'].update({
                             'title': symbol + '　' +  tfrom + '  ...  ' + tto,
+                            'width': 1100,
+                            'height': 400,
                             'xaxis':{
                                         'title': '',
                                         'showgrid': True,
@@ -299,10 +304,15 @@ def createTable(df):
                 'maxWidth':'80px', 
                 'minWidth':'40px', 
                 'whiteSpace':'normal' ,
-                'height': 'auto'
+                'height': 'auto',
+                'font_family': 'sans-serif',
+                'font_size': '12px',
             },
+            style_data={'color':'black','backgroundColor':'white'},
+            style_data_conditional=[{'if':{'row_index':'odd'},'backgroundColor':'rgb(220,220,220)'}],
+            style_header={'backgroundColor':'rgb(210,210,210)','color':'black','fontWeight':'bold'},
             fixed_rows={'headers':True},   
-            style_table={'minWidth':'95%'},
+            style_table={'minWidth':'90%'},
             columns=[{'name':col, 'id':col} for col in df.columns],
             data=df.to_dict('records'),
             page_size=10,
