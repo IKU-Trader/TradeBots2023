@@ -31,6 +31,9 @@ account_info = None
 server = PyMT5(TimeUtils.TIMEZONE_TOKYO)
 app = Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
 
+TYPE_BUY = 0 
+TYPE_SELL = 1
+
 # ----
 setting_bar = dbc.Row([
                         html.H5('Settings',
@@ -73,9 +76,44 @@ barsize = html.Div([    html.P('Display Bar Size',
                         barsize_dropdown])
 
 
-position_button = html.Div( html.Button(id='draw_button', n_clicks=0, children='Position Update',
-                            style={'margin-top': '16px'},
-                            className='btn btn-primary'))
+market_order = html.Div([ html.P('Entry (Market Order)',
+                                         style={'margin-top': '8px', 'margin-bottom': '4px'}, 
+                                         className='font-weight-bold'),
+                         
+                                 dcc.Input(id="market_order_lot", type="number", placeholder="lot",
+                                           min=0.1, max=100, step=0.1,
+                                           style={'margin-top': '8px'}
+                                           ),
+                                 html.Button(id='buy_market_order_button', n_clicks=0, children='Buy',
+                                             style={'margin-top': '4px', 'margin-left': '16px', 'margin-right': '8px'},
+                                             className='btn btn-primary'),
+                                 html.Button(id='sell_market_order_button', n_clicks=0, children='Sell',
+                                             style={'margin-top': '4px', 'margin-right': '8px'},
+                                             className='btn btn-primary'),
+                                 html.Div(id='market_order_response', children='')
+                                 ])
+
+close_order = html.Div([ html.P('Close Order',
+                                style={'margin-top': '8px', 'margin-bottom': '4px'}, 
+                                className='font-weight-bold'),
+                                html.Div([
+                                     dcc.Input(id="order_ticket", type="number", placeholder="ticket",
+                                           min=1220000, max=10000000, step=1,
+                                           style={'margin-top': '8px', 'margin-right': '4px'}
+                                           ), 
+                                     dcc.Input(id="close_lot", type="number", placeholder="lot",
+                                           min=0.1, max=100, step=0.1,
+                                           style={'margin-top': '8px'}
+                                           ),
+                                     html.Button(id='close_apply_button', n_clicks=0, children='Apply',
+                                                        style={'margin-top': '4px', 'margin-right': '16px'},
+                                                        className='btn btn-primary')
+                                     ]),
+                                html.Div([
+
+                                            html.Div(id='close_order_response', children='')
+                                        ])
+                                ])
 
 sidebar =  html.Div([
                         setting_bar,
@@ -83,7 +121,9 @@ sidebar =  html.Div([
                                  timeframe,
                                  barsize,
                                  html.Hr(),
-                                 position_button],
+                                 market_order,
+                                 html.Hr(),
+                                 close_order],
                         style={'height': '50vh', 'margin': '8px'})
                     ])
     
@@ -95,12 +135,20 @@ contents = html.Div([
                         dbc.Row([
                                     html.Div(id='chart_output'),
                                     html.P('Account',
-                                           style={'margin-top': '12px', 'margin-bottom': '12px'}, 
+                                           style={'margin-top': '4px', 'margin-bottom': '2px'}, 
                                            className='font-weight-bold'),
                                     html.Div([],
                                              id='account_info',
-                                             style={'height': '5vh', 'width': '120vh', 'margin': '10px'}),
-                                    html.Div(id='table_container')
+                                             style={'height': '5vh', 'width': '120vh', 'margin': '2px'}),
+                                    html.Div(id='account_table'),
+                                    html.P('Position',
+                                           style={'margin-top': '100px', 'margin-bottom': '2px'}, 
+                                           className='font-weight-bold'),
+                                    html.Div([],
+                                             id='position_info',
+                                             style={'height': '5vh', 'width': '120vh', 'margin': '2px'}),
+                                    html.Div(id='position_table')                                    
+                                    
                                 ]),
                         dcc.Interval(
                                         id='timer',
@@ -117,11 +165,81 @@ app.layout = dbc.Container([
                                     style={"height": "80vh"}),
                             ],
                             fluid=True)
+
 @app.callback(
-    [Output('chart_output', 'children'),
-    Output('account_info', 'children')],
-    Input('timer', 'n_intervals'),
-    State('symbol_dropdown', 'value'), State('timeframe_dropdown', 'value'), State('barsize_dropdown', 'value')
+    Output('market_order_response', 'children'),
+    Input('buy_market_order_button', 'n_clicks'),
+    Input('sell_market_order_button', 'n_clicks'),
+    State('market_order_lot', 'value'), 
+    State('symbol_dropdown', 'value')
+)
+def update_market_order(buy_n_clicks, sell_n_clicks, lot, symbol):
+    print(buy_n_clicks, sell_n_clicks, lot, symbol)
+    if buy_n_clicks == 0 and sell_n_clicks == 0:
+        return ''
+    lot = float(lot)
+    if buy_n_clicks > 0:    
+        ret, dic = server.buyMarketOrder(symbol, lot)
+    
+    if sell_n_clicks > 0:
+        ret, dic = server.sellMarketOrder(symbol, lot)
+        
+    if ret:
+        return 'Success'
+    else:
+        return 'Fail'
+    
+
+@app.callback(
+    Output('close_order_response', 'children'),
+    Input('close_apply_button', 'n_clicks'),
+    State('symbol_dropdown', 'value'),
+    State('close_lot', 'value'),
+    State('order_ticket', 'value'), 
+)
+def update_close_order(n_clicks, symbol, lot, ticket):
+    print(n_clicks, symbol, ticket, lot)
+    if n_clicks == 0:
+        return ''
+    lot = float(lot)
+    ticket = int(ticket)
+    dic = server.position(ticket)
+    if dic is None:
+        return 'Fail No position of ticket'
+    print(dic)
+    
+    pos_time = TimeUtils.timestamp2localtime(dic['time'], tzinfo=TimeUtils.TIMEZONE_TOKYO)
+    pos_symbol = dic['symbol']
+    pos_type = dic['type']
+    pos_volume = float(dic['volume'])
+    pos_profit = dic['profit']
+    pos_current_price = dic['current_price']
+    
+    if symbol != pos_symbol:
+        return 'Fail No Ticker symbol of the ticket'
+    
+    if pos_volume < lot:
+        return 'Fail volume is ' + str(pos_volume)
+    
+    print('lot', lot, pos_volume)
+    
+    if pos_type == TYPE_BUY:
+        ret, dic = server.closeBuyPositionMarketOrder(symbol, lot, ticket)
+    elif pos_type == TYPE_SELL:
+        ret, dic = server.closeSellPositionMarketOrder(symbol, lot, ticket)
+        
+    if ret:
+        return 'Success'
+    else:
+        return 'False retcode: ' + str(dic['retcode'])
+
+        
+@app.callback([
+                 Output('chart_output', 'children'),
+                 Output('account_info', 'children'),
+                 Output('position_info', 'children'),],
+                 Input('timer', 'n_intervals'),
+                 State('symbol_dropdown', 'value'), State('timeframe_dropdown', 'value'), State('barsize_dropdown', 'value')
 )
 def updateChart(interval, symbol, timeframe, num_bars):
     #print(interval)
@@ -131,7 +249,8 @@ def updateChart(interval, symbol, timeframe, num_bars):
     chart = createChart(symbol, timeframe, dic)
     if (interval % 10) == 0 or (account_info is None):
         account = accountTable()
-    return (chart, account)
+    position = positionTable()
+    return (chart, account, position)
   
 def createChart(symbol, timeframe, dic):
     fig = create_candlestick(dic[const.OPEN], dic[const.HIGH], dic[const.LOW], dic[const.CLOSE])
@@ -145,7 +264,7 @@ def createChart(symbol, timeframe, dic):
     else:
         form = '%d/%H:%M'
     fig['layout'].update({
-                            'title': symbol + '　' +  tfrom + '  ->  ' + tto,
+                            'title': symbol + '　' +  tfrom + '  ...  ' + tto,
                             'xaxis':{
                                         'title': '',
                                         'showgrid': True,
@@ -153,9 +272,13 @@ def createChart(symbol, timeframe, dic):
                                         'tickvals': np.arange(xtick0, len(time), 5)
                                     },
                             'yaxis':{
-                                        'title': ''
-                                    }
-       })
+                                        'title': '',
+                                        'tickformat': 'digit'
+                                    },
+                            'margin': {'l':10, 'r':10, 'b' :40, 't':70, 'pad': 4},
+                            'paper_bgcolor': '#f7f7ff' # RGB
+                        })
+    
     #print(fig)
     return dcc.Graph(id='stock-graph', figure=fig)
 
@@ -164,21 +287,26 @@ def accountTable():
     df = server.accountInfo()
     return createTable(df)
     
-
+def positionTable():
+    df_buy, df_sell = server.positions('')
+    df = pd.concat([df_buy, df_sell])
+    return createTable(df)
 
 def createTable(df):
     table = dash_table.DataTable(
-            # セルサイズの設定
             style_cell={
-                'textAliign':'center',  # テキストを中央寄せ
-                'maxWidth':'60px',      # 最大横幅
-                'minWidth':'60px',      # 最小横幅
-                'whiteSpace':'normal'   # 文字を折り返して表示
+                'textAlign':'center', 
+                'maxWidth':'80px', 
+                'minWidth':'40px', 
+                'whiteSpace':'normal' ,
+                'height': 'auto'
             },
-            fixed_rows={'headers':True},        # 縦スクロール時にヘッダーを固定
-            style_table={'minWidth':'90%'},    # テーブル全幅表示
+            fixed_rows={'headers':True},   
+            style_table={'minWidth':'95%'},
             columns=[{'name':col, 'id':col} for col in df.columns],
-            data=df.to_dict('records')
+            data=df.to_dict('records'),
+            page_size=10,
+            export_format='csv'
         )
     return table
 

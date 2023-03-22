@@ -302,30 +302,42 @@ class PyMT5:
             return True
 
     def positions(self, symbol: str):
-        pos = mt5.positions_get(group='*'+symbol+'*')
+        if symbol is None:
+            pos = mt5.positions_get()
+        else:
+            if symbol.strip() == '':
+                pos = mt5.positions_get()
+            else:
+                pos = mt5.positions_get(group='*'+symbol+'*')
         buy_positions = []
         sell_positions = []
         for p in pos:
-            order_type = p[5]
-            profit = p[15]
-            lot = [9][0]
-            price = [10][0]
-            if order_type == 0: # buy
-                buy_positions.append([lot, profit, price])
+            dic = p._asdict()
+            order_type = dic['type']
+            if order_type == 0:
+                typ = 'buy'
+            else:
+                typ = 'sell'
+            time = dic['time']
+            t = TimeUtils.timestamp2localtime(time, tzinfo=TimeUtils.TIMEZONE_TOKYO)
+            values = [typ, t, dic['symbol'], dic['volume'], dic['ticket'], dic['profit'], dic['sl'], dic['tp']]
+            if order_type == 0: # buy position
+                buy_positions.append(values)
             elif order_type == 1: # sellポジションの場合
-                sell_positions.append([lot, profit, price])
-        return (buy_positions, sell_positions)
+                sell_positions.append(values)
+                
+        columns = ['type', 'time', 'symbol', 'volume', 'ticket', 'profit', 'stoploss', 'takeprofit']    
+        df_buy = pd.DataFrame(data=buy_positions, columns=columns)
+        df_sell = pd.DataFrame(data=sell_positions, columns=columns)
+        return (df_buy, df_sell)
       
     def position(self, ticket):
         dic = {}
         pos = mt5.positions_get(ticket=ticket)
         if pos is None:
-            return dic
+            return None
         p = pos[0]
-        dic['price_open'] = p.price_open
-        dic['price_current'] = p.price_current
-        dic['swap'] = p.swap
-        dic['profit'] = p.profit
+        dic = p._asdict()
         return dic
 
     def buyMarketOrder(self, symbol: str, lot:int, slippage=None, stoploss=None, takeprofit=None):
@@ -379,6 +391,11 @@ def test():
     dic = server.download('DOWUSD', 'M1', 5)
     info = server.accountInfo()
     print(info)
+    
+    (df_buy, df_sell) = server.positions('')
+    print(df_buy)
+    print(df_sell)
+    
     
 if __name__ == '__main__':
     test()
