@@ -105,11 +105,15 @@ close_order = html.Div([ html.P('Close Order',
                                            min=0.1, max=100, step=0.1,
                                            style={'margin-top': '8px'}
                                            ),
-                                     html.Button(id='close_apply_button', n_clicks=0, children='Apply',
+                                     html.Button(id='close_apply_button', n_clicks=0, children='Close',
                                                         style={'margin-top': '4px', 'margin-right': '16px'},
-                                                        className='btn btn-primary')
-                                     ]),
+                                                        className='btn btn-primary')]
+                                    ),
+
                                 html.Div([
+                                     html.Button(id='close_all_button', n_clicks=0, children='Close All',
+                                                        style={'margin-top': '4px', 'margin-right': '16px'},
+                                                        className='btn btn-primary'),
 
                                             html.Div(id='close_order_response', children='')
                                         ])
