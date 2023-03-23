@@ -334,7 +334,7 @@ class PyMT5:
     def position(self, ticket):
         dic = {}
         pos = mt5.positions_get(ticket=ticket)
-        if pos is None:
+        if len(pos) == 0:
             return None
         p = pos[0]
         dic = p._asdict()
@@ -401,11 +401,11 @@ def test():
     info = server.accountInfo()
     print(info)
     
-    dic = server.position(1185619)
+    dic = server.position(1230514)
     (df_buy, df_sell) = server.positions('')
     print(df_buy)
     print(df_sell)
-    
+    server.closeAll('')
     
 if __name__ == '__main__':
     test()
