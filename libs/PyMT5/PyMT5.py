@@ -330,7 +330,7 @@ class PyMT5:
         df_buy = pd.DataFrame(data=buy_positions, columns=columns)
         df_sell = pd.DataFrame(data=sell_positions, columns=columns)
         return (df_buy, df_sell)
-      
+    
     def position(self, ticket):
         dic = {}
         pos = mt5.positions_get(ticket=ticket)
@@ -386,12 +386,22 @@ class PyMT5:
         order = CloseSellPostionMarketOrder(symbol, lot, ticket)
         return self.sendOrder(order)
 
+    def closeAll(self, symbol: str):
+        (df_buy, df_sell) = self.positions(symbol) 
+        for i in range(len(df_buy)):
+            d = df_buy.iloc[i, :]
+            self.closeBuyPositionMarketOrder(d['symbol'], float(d['volume']), int(d['ticket']))
+        for i in range(len(df_sell)):
+            d = df_sell.iloc[i, :]
+            self.closeSellPositionMarketOrder(d['symbol'], float(d['volume']), int(d['ticket']))    
+
 def test():
     server = PyMT5(TimeUtils.TIMEZONE_TOKYO)
     dic = server.download('DOWUSD', 'M1', 5)
     info = server.accountInfo()
     print(info)
     
+    dic = server.position(1185619)
     (df_buy, df_sell) = server.positions('')
     print(df_buy)
     print(df_sell)
