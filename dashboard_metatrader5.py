@@ -159,7 +159,7 @@ app.layout = dbc.Container([dbc.Row([dbc.Col(sidebar, width=2, className='bg-lig
     State('symbol_dropdown', 'value')
 )
 def update_market_order(buy_n_clicks, sell_n_clicks, lot, symbol):
-    print(buy_n_clicks, sell_n_clicks, lot, symbol)
+    #print(buy_n_clicks, sell_n_clicks, lot, symbol)
     if buy_n_clicks == 0 and sell_n_clicks == 0:
         return ('', 0, 0)
     lot = float(lot)
@@ -249,7 +249,7 @@ def updateChart(interval, symbol, timeframe, num_bars):
         tickets += d2
     
     options = [{'label': str(x), 'value': str(x)} for x in tickets]
-    print(options)
+    #print(options)
     return (chart, account, table, options)
   
 def createChart(symbol, timeframe, dic):
